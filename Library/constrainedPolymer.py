@@ -134,7 +134,7 @@ class ConstrainedPolymerPackBBG(BBG):
     def checkBondLengths(self):
         print [ np.linalg.norm(self.buildingBlockXYZ[i] - self.buildingBlockXYZ[i-1]) for i in range(1, len(self.buildingBlockXYZ)) ]       
         
-    def generateAllowedList(self):
+    def generateAllowedList(self, short=False):
         return [i for i in range(0, self.numPoints) ]
         
     def generateBuildingBlockXYZ(self):
@@ -266,6 +266,11 @@ class ConstrainedPolymerPackBBG(BBG):
                 
                 maxStepRange = minDist/initDist
           
+                # if the minDist is close then regenerate the allowed list with the short parameter set.
+                # In this case only make moves in the ten residues closest to the target.
+                if minDist<3.0:
+                    self.generateAllowedList(short=True)
+          
                 curMin += 1 
                 self.outline(numMoves, self.maxNumConnectingMoves, minDist, minPE, maxStepRange )
                 if curMin <= 20 and self.dumpInterimFiles==1:
@@ -279,6 +284,9 @@ class ConstrainedPolymerPackBBG(BBG):
             
             if numMoves % 100 == 0: 
                 self.outline(numMoves, self.maxNumConnectingMoves, minDist, minPE, maxStepRange )                 
+        
+        # regenerate the allowed list at full length
+        self.generateAllowedList(short=False)
         
         return lowestEnergyMinimum
 
@@ -324,7 +332,7 @@ class ConstrainedPolymerPackBBG(BBG):
         # if there are less points outside the zone than previously accept it.
         # if there are more points outside the zone then accept it with a probability that depends
         # exponentially on the difference between the current minimum number of points inside.
-        
+
         # check which indices are outside the array
         curIndicesOutside = self.checkEnvelope(xyzVals)
         curXYZVals = xyzVals

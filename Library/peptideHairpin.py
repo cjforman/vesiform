@@ -108,14 +108,19 @@ class peptideHairpinGenerator(CPBBG):
         
         return CPBBG.generateBuildingBlock(self, self.numPoints, pointsA[2], pointsB[2], minDist, bondLength, numCrankMoves, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid, envelopeList=envelopeList) 
 
-    def generateAllowedList(self):
+    def generateAllowedList(self, short=False):
         # add the first and last points to the allowed list.
         # This is important to allow the full chain to be able to be mapped into the envelope.
         allowed = [0, self.numPoints-1]
         
         # over ride the naming of the atoms with ca=True. 
         names = self.generateBuildingBlockNames(ca=True)
-        [ allowed.insert(-1,i) for i, name in enumerate(names) if name=='CA' ]
+        
+        # if the minimisation is already close then only make moves in the last ten CAs closest to the chain 
+        if short:
+            [ allowed.insert(-1,i) for i, name in enumerate(names) if name=='CA' and i>(len(names) - 10) ]
+        else:
+            [ allowed.insert(-1,i) for i, name in enumerate(names) if name=='CA' ]
         
         return allowed
 
