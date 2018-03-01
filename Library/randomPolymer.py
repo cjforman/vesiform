@@ -270,7 +270,8 @@ class RandomPolymerPackBBG(BBG):
         if minNumIndicesOutside > 0:
             print "Warning: there are points outside the envelope that were not moved inside."
             if self.dumpInterimFiles:
-                fIO.saveXYZ(minXYZVals[minIndices], 'B', 'outsideEnvelope.xyz')
+                xyzVals = [ minXYZVals[index] for index in minIndices]
+                fIO.saveXYZ(xyzVals, 'B', 'outsideEnvelope.xyz')
                 
                 
         return minXYZVals
