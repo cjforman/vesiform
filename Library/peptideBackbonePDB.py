@@ -57,13 +57,14 @@ class pdbPeptideBackboneGenerator(BBG):
     def generateBuildingBlockDirector(self):
         # check to see if there was an externally imposed director
         director = None
-        if not self.director==None:
-            director = self.director
-        else:
+        if None in self.director:
             # calculate the eigenvectors of the inertial tensor of the protein backbone and 
             # return the unit vector along the principal axis ( assumes each point is of unit mass so not quite correct).
             pAxis = cart.getPrincipalAxis(self.buildingBlockXYZ)
             director = pAxis/np.linalg.norm(pAxis)
+        else:
+            director = self.director
+
         return director
 
     def generateBuildingBlockRefPoint(self):
