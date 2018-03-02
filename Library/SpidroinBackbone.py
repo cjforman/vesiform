@@ -48,6 +48,7 @@ class spidroinBackboneGenerator(BBG):
     def generateBuildingBlock(self, minDist, species='SP1', showBlockDirector=False):
     
         self.species = species
+        self.minDist = minDist
         
         if species=='SP1':
             self.numGUnits = self.SP1NumGUnits 
@@ -58,7 +59,7 @@ class spidroinBackboneGenerator(BBG):
     
         self.numPoints = self.numGUnits * 3 + self.numPQUnits * 3  
         self.directorHat = np.array([0.0, 0.0, 1.0])
-        self.minDist = minDist
+        
         
         return BBG.generateBuildingBlock(self, self.numPoints, minDist, showBlockDirector=showBlockDirector)
 
@@ -235,7 +236,6 @@ class spidroinBackboneGenerator(BBG):
             FPosQ = NPosQ + self.QQbondLength/2.0 * dirHat
             CPosQ = FPosQ + self.QQbondLength/2.0 * dirHat
             G_PQUnit = [NPosG, FPosG, CPosG, NPosQ, FPosQ, CPosQ]
-            
         return G_PQUnit
 
     def generateBuildingBlockNames(self):

@@ -71,6 +71,7 @@ class ConstrainedPolymerPackBBG(BBG):
         self.maxNumFoldingMoves = self.getParam('maxNumFoldingMoves')
         self.dumpInterimFiles = self.getParam('dumpInterimFiles')
         self.distEpsilon= self.getParam("distEpsilon")
+        self.distanceScale = self.getParam("distanceScale")
         self.maxNumConnectingMoves = self.getParam("maxNumConnectingMoves")
         self.springConstant = self.getParam("springConstant")
         self.connectingTemp = self.getParam("connectingTemp")
@@ -99,8 +100,8 @@ class ConstrainedPolymerPackBBG(BBG):
         self.bondLength = float(bondLength)
         self.minDist = minDist
         self.numCrankMoves = numCrankMoves
-        self.allowedList = self.generateAllowedList()
         self.blockNames = self.generateBuildingBlockNames()
+        self.allowedList = self.generateAllowedList()
         blockDirector = self.generateBuildingBlockDirector()
         self.blockDirectorHat = blockDirector/np.linalg.norm(blockDirector)
         self.blockRefPoint= self.generateBuildingBlockRefPoint()
@@ -263,7 +264,7 @@ class ConstrainedPolymerPackBBG(BBG):
                 minPE = curPE
                 minDist = curDist
                 
-                maxStepRange = min(1.0, minDist/100.0)
+                maxStepRange = min(1.0, minDist/self.distanceScale)
           
                 # if the minDist is close then regenerate the allowed list with the short parameter set.
                 # In this case only make moves in the ten residues closest to the target.
@@ -348,13 +349,11 @@ class ConstrainedPolymerPackBBG(BBG):
             # Do the crank shaft move on the current working set. 
             # Already rejects crossovers with pointsToAvoid and selfcrossovers.
             # Will return the current set in those cases so no move on number of points.   
-            newXYZVals = self.crankShaftMoves(curXYZVals, 1, maxStepScale)
+            newXYZVals, numValidMoves = self.crankShaftMoves(curXYZVals, 1, maxStepScale)
 
             # find indices outside the envelope and count them.        
             newIndicesOutside = self.checkEnvelope(newXYZVals)
             newNumIndicesOutside = len(newIndicesOutside)
-            
-        
         
             # if a new global minimum number of indices inside the envelope then keep the move.
             if newNumIndicesOutside < minNumIndicesOutside:
@@ -415,28 +414,40 @@ class ConstrainedPolymerPackBBG(BBG):
         workingXYZVals = xyzValsOrig[:]
 
         numMoves = 0 
+        numValidMoves = 0
         while numMoves < numCrankShaftMoves:
 
-            # first choose two indices
-            index1=0
-            index2=0
+            # select some indices at random
+            index1 = 0
+            index2 = 0            
+            
             # check for equal or adjacent indices and indices on the allowed list
-            while (abs(index1-index2) < 2) or not (index1 in self.allowedList) or not (index2 in self.allowedList):
-                index1 = rnd.randint(0, len(workingXYZVals))
-                index2 = rnd.randint(0, len(workingXYZVals))
+            while (abs(index1-index2) < 2):
+
+                # pick two points in the allowed list at random
+                allowedIndex1 = rnd.randint(0, len(self.allowedList) - 1)
+                allowedIndex2 = rnd.randint(0, len(self.allowedList) - 1)
+                
+                # get the index values
+                index1 = self.allowedList[allowedIndex1]
+                index2 = self.allowedList[allowedIndex2]
 
             indexMin = min([index1, index2])
             indexMax = max([index1, index2])
 
             # performs a single crank on the given indices. 
             # If move is rejected due to overlaps then the original array is returned
-            workingXYZVals = self.crankShaftMove(workingXYZVals, indexMin, indexMax, maxStepScale)
+            workingXYZVals, validCrank = self.crankShaftMove(workingXYZVals, indexMin, indexMax, maxStepScale)
+
+            # wait until we've have numCrankShaft valid moves
+            if validCrank:
+                numValidMoves += 1
 
             numMoves += 1
             if numMoves % 20 == 0:
                 print numMoves, " out of ", numCrankShaftMoves 
        
-        return workingXYZVals
+        return workingXYZVals, numValidMoves
 
     def crankShaftMove(self, workingXYZVals, indexMin, indexMax, maxStepScale):
         # Performs rotation of random size about the axis between the atoms
@@ -485,11 +496,14 @@ class ConstrainedPolymerPackBBG(BBG):
         
         # reconstruct workingXYZVals
         if validCrank:
-            workingXYZVals = np.concatenate((lowList, newVals, highList), 0)
+            try:
+                workingXYZVals = np.concatenate((lowList, newVals, highList), 0)
+            except ValueError:
+                validCrank = False
                
         # if valid Crank is false then the original list is returned intact
         # if valid crank is true then the new vals are inserted into the new list
-        return workingXYZVals
+        return workingXYZVals, validCrank
         
     def getParams(self):
         return self.params 
