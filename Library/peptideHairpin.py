@@ -129,7 +129,7 @@ class peptideHairpinGenerator(CPBBG):
         # and a pseudo energy landscape approach to find an initial chain with the end point fixed
         # at point B.
         # create a regular backBone using PointsA as the first residue
-        peptideBackbone = self.PBG.generateBuildingBlock(self.numResidues, seedResidue = self.pointsA)
+        peptideBackbone = self.PBG.generateBuildingBlock(self.numResidues, seedResidue = [self.pointsA[2], self.pointsA[1], self.pointsA[0]])
         return peptideBackbone.getAtomsXYZ()  
         
     def PE(self, xyzVals):
@@ -141,8 +141,9 @@ class peptideHairpinGenerator(CPBBG):
         PE += 0.5 * 3 * self.springConstant * dist1**2
         
         # add spring between pointsB[1] and end of xyzVals[-2] 
-        dist2 = np.linalg.norm(xyzVals[-2] - self.pointsB[1])
-        PE += 0.5 * 2 * self.springConstant * dist2**2
+        dist2 = 0.0
+        # dist2 = np.linalg.norm(xyzVals[-2] - self.pointsB[1])
+        # PE += 0.5 * 2 * self.springConstant * dist2**2
         
         return PE, np.sqrt(dist1**2 + dist2**2)
         

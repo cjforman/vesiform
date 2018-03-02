@@ -6,7 +6,7 @@ import Utilities.fileIO as fIO
 from Builder.BuildingBlockGenerator import BuildingBlockGenerator as BBG
 from Library.peptideBackbonePDB import pdbPeptideBackboneGenerator as PDBGen
 from SpacePack.SpacePack import SpacePackBBG as SPBBG
-from Library.peptideHairpin6 import peptideHairpinGenerator as PHG
+from Library.peptideHairpin import peptideHairpinGenerator as PHG
 from Projects.betasheet2 import betasheetGen as BSG
 
 
@@ -193,7 +193,7 @@ class spidroinProteinGenerator(BBG):
         for betaSheetBB in self.betaSheetBBs:
             pointsToAvoid = np.concatenate( (pointsToAvoid, betaSheetBB.blockXYZVals), 0 )
 
-        if self.dumpInterimFiles==1:
+        if self.dumpInterimFiles==1 and self.numBetasheets>0:
             # compile the beta sheets into a single entity and dump to file - for debug
             betaSheets = self.betaSheetBBs[0].blockXYZVals
             for betaSheet in self.betaSheetBBs[1:]:
@@ -292,23 +292,27 @@ class spidroinProteinGenerator(BBG):
                                                                  self.phi,
                                                                  self.angleC))
         
-        # find a valid order of cyling through the connectors
-        COrderIndex, NOrderIndex = self.findValidPairOrder(self.numBetasheets, self.numBetaStrands)
-        
-        # Re order N and C points with the chosen valid index order
-        betaSheetNPoints = [ betaSheetNPoints[index] for index in NOrderIndex ] 
-        betaSheetCPoints = [ betaSheetCPoints[index] for index in COrderIndex ]
-
         # seed the coil point list with the global N and C termini of the coil 
         coilPoints = [(pointsA, pointsB)] # coil pair goes from C terminus to N terminus 
         # so pair[0] is C, pair[1] is N
+
         
-        # loop through each CPoint, NPoint pair (which will be randomised throughout all the 
-        # beta sheets) to make a master list of connections to connect with a randomcoil
-        for CPoint, NPoint in zip(betaSheetCPoints, betaSheetNPoints):
-            newCoilEntry = (coilPoints[-1][0], NPoint) # the previous C terminus going to a new N terminus.
-            coilPoints[-1] = (CPoint, coilPoints[-1][1]) # a new C terminus going to the last N terminus.
-            coilPoints.insert(-1, newCoilEntry) # insert the new coil points at the end of the list.
+        if self.numBetasheets>0:
+        
+            # find a valid order of cyling through the connectors
+            COrderIndex, NOrderIndex = self.findValidPairOrder(self.numBetasheets, self.numBetaStrands)
+            
+            # Re order N and C points with the chosen valid index order
+            betaSheetNPoints = [ betaSheetNPoints[index] for index in NOrderIndex ] 
+            betaSheetCPoints = [ betaSheetCPoints[index] for index in COrderIndex ]
+    
+            
+            # loop through each CPoint, NPoint pair (which will be randomised throughout all the 
+            # beta sheets) to make a master list of connections to connect with a randomcoil
+            for CPoint, NPoint in zip(betaSheetCPoints, betaSheetNPoints):
+                newCoilEntry = (coilPoints[-1][0], NPoint) # the previous C terminus going to a new N terminus.
+                coilPoints[-1] = (CPoint, coilPoints[-1][1]) # a new C terminus going to the last N terminus.
+                coilPoints.insert(-1, newCoilEntry) # insert the new coil points at the end of the list.
 
         if self.dumpInterimFiles==1:
             coilPointsXYZ = []
@@ -320,7 +324,8 @@ class spidroinProteinGenerator(BBG):
             for coilPair in coilPoints:
                 for coilConnector in coilPair:
                     coilPointsXYZ += coilConnector
-                    coilPointNames += [names[curConnection % 10], names[curConnection % 10], names[curConnection % 10]]
+                    coilPointNames += ['H', 'He', 'Li']
+                    # coilPointNames += [names[curConnection % 10], names[curConnection % 10], names[curConnection % 10]]
                 curConnection += 1
 
             fIO.saveXYZList(coilPointsXYZ, coilPointNames, "CoilConnectors.xyz")
@@ -339,7 +344,7 @@ class spidroinProteinGenerator(BBG):
         numResiduesToDivideUp = self.numResiduesCoil - numResiduesInBetaStrands - numResiduesInTermini  
         
         if numResiduesToDivideUp < sum(minVals):
-            print "Warning: Not enough resiudes for minimal coil connections."
+            print "Warning: Not enough residues for minimal coil connections."
         
         coilLengths = self.divideTotalSumEvenlyAmongListOfGroups(numResiduesToDivideUp, minVals)
         numCrankMoves = 0
@@ -354,7 +359,7 @@ class spidroinProteinGenerator(BBG):
             if len(coilPoints)>1:
                 envelopeList.append('outersphere ' + str(1.5 * distance/2.0))
            
-            envelopeList=['None'] # useful debug statement    
+            #envelopeList=['None'] # useful debug statement    
             # generate the hairpin connection
             hairpinBB = self.CoilGen.generateBuildingBlock(coilLength, 
                                                            coil[0],
@@ -366,7 +371,7 @@ class spidroinProteinGenerator(BBG):
                                                            envelopeList=envelopeList)
             
             # add the hairpin to the pointsToAvoid array
-            pointsToAvoid = np.concatenate( (pointsToAvoid, betaSheetBB.blockXYZVals), 0 )
+            pointsToAvoid = np.concatenate( (pointsToAvoid, hairpinBB.blockXYZVals), 0 )
             self.hairpinBBs.append(hairpinBB)
 
         if self.nameByBuildingBlockType:
@@ -503,7 +508,7 @@ class spidroinProteinGenerator(BBG):
         TNB3 = coords.constructTNBFrame(s2, m2, m1)
         m0 = m1 +  displacement_m1_m0 * coords.generateTNBVecXYZ(TNB3, beta_m2_m1_m0, alpha_s2_m2_m1_m0)
         
-        return [m2, m1, m0]
+        return [m0, m1, m2]
     
     def divideTotalSumEvenlyAmongListOfGroups(self, totalSum, minVals):
         # function takes a list of integers called minVals
@@ -568,7 +573,7 @@ if __name__=="__main__":
     
     # generating an individual spidroin
     spidroinProteinGenerator = spidroinProteinGenerator(filename)
-    numBetasheets = 1
+    numBetasheets = 0
     minDist = 1.0
     longChain = False
     startPoint = np.array([0.0, -0.0, 0.0])

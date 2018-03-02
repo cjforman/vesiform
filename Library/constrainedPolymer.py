@@ -156,8 +156,7 @@ class ConstrainedPolymerPackBBG(BBG):
 
         if self.dumpInterimFiles==1 and self.numCrankMoves > 0:
             fIO.saveXYZList(xyzVals, self.blockNames, 'crankedChain.xyz')
-            print "Visualising envelope"
-            #self.visualiseEnvelope(10000, 20.0, 20.0, 20.0)
+        
         
         print "Ensuring structure is inside envelope"
         xyzVals = self.foldInsideEnvelope(xyzVals)
@@ -264,12 +263,12 @@ class ConstrainedPolymerPackBBG(BBG):
                 minPE = curPE
                 minDist = curDist
                 
-                maxStepRange = minDist/initDist
+                maxStepRange = min(1.0, minDist/100.0)
           
                 # if the minDist is close then regenerate the allowed list with the short parameter set.
                 # In this case only make moves in the ten residues closest to the target.
-                if minDist<3.0:
-                    self.generateAllowedList(short=True)
+                #if minDist<3.0:
+                #    self.generateAllowedList(short=True)
           
                 curMin += 1 
                 self.outline(numMoves, self.maxNumConnectingMoves, minDist, minPE, maxStepRange )
