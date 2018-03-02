@@ -55,8 +55,11 @@ polymer1Strands = [ Polymer1Generator.generateBuildingBlock(numMonomersPerPolyme
 names =  ['O'] * numA 
 names = np.concatenate( (names, ['C'] * numB), 0 ) 
 
+strandNum = 0
 for strand in polymer1Strands:
     strand.blockAtomNames = names[:]
+    strand.exportBBK("strand" + str(strandNum))
+    strandNum += 1
 
 AllNames = []
 
@@ -71,6 +74,6 @@ for director, pos, strand in zip(directorsHat, Polymer1SpherePoints, polymer1Str
         allNames = np.concatenate( (allNames, strand.blockAtomNames), 0)
     curStrand += 1
 
-fIO.saveXYZList(xyzVals, allNames, "polymerVesicle.xyz")
+fIO.saveXYZList(xyzVals, allNames, "Vesicle.xyz")
 
 print "example done"

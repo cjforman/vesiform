@@ -11,18 +11,18 @@ bondlength = 1.5
 
 Polymer1Generator = RPBBG('RandomPolymer.txt')
 
-numA = 35
-numB = 35
+numA = 30
+numB = 40
 numMonomersPerPolymer = numA + numB
-numPolymersPerSphere = 88
-FMaxRadius = 15
+numPolymersPerSphere = 180 
+FMaxRadius = 10
 FMinRadius = 3
-FZ1 = 50
-FZ2 = 10
-alpha1= 50
-alpha2 = 90
-beta1= 80
-beta2 = 170
+FZ1 = 80
+FZ2 = 15
+alpha1= 40
+alpha2 = 80
+beta1= 130
+beta2 = 165
 AtomicMinDist = 1.0
 
 centerPos = np.array([0.0, 0.0, 0.0])
@@ -52,8 +52,11 @@ polymer1Strands = [ Polymer1Generator.generateBuildingBlock(numMonomersPerPolyme
 names =  ['O'] * numA 
 names = np.concatenate( (names, ['C'] * numB), 0 ) 
 
+strandNum = 0
 for strand in polymer1Strands:
     strand.blockAtomNames = names[:]
+    strand.exportBBK("strand" + str(strandNum))
+    strandNum += 1
 
 directors = [ (pos - centerPos)/np.linalg.norm(pos - centerPos) for pos in Polymer1SpherePoints] 
 
@@ -70,7 +73,7 @@ for director, pos, strand in zip(directors, Polymer1SpherePoints, polymer1Strand
         allNames = np.concatenate( (allNames, strand.blockAtomNames), 0)
     curStrand += 1
 
-fIO.saveXYZList(xyzVals, allNames, "polymer1.xyz")
+fIO.saveXYZList(xyzVals, allNames, "sphere.xyz")
 
 
 print "example done"

@@ -324,8 +324,8 @@ class spidroinProteinGenerator(BBG):
             for coilPair in coilPoints:
                 for coilConnector in coilPair:
                     coilPointsXYZ += coilConnector
-                    coilPointNames += ['H', 'He', 'Li']
-                    # coilPointNames += [names[curConnection % 10], names[curConnection % 10], names[curConnection % 10]]
+                    #coilPointNames += ['H', 'He', 'Li']
+                    coilPointNames += [names[curConnection % 10], names[curConnection % 10], names[curConnection % 10]]
                 curConnection += 1
 
             fIO.saveXYZList(coilPointsXYZ, coilPointNames, "CoilConnectors.xyz")
@@ -367,7 +367,7 @@ class spidroinProteinGenerator(BBG):
                                                            self.minDist,
                                                            numCrankMoves,
                                                            visualiseEnvelope=(0, 300), 
-                                                           pointsToAvoid=[], 
+                                                           pointsToAvoid=pointsToAvoid, 
                                                            envelopeList=envelopeList)
             
             # add the hairpin to the pointsToAvoid array

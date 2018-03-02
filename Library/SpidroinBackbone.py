@@ -7,11 +7,7 @@ import numpy as np
 from Builder.BuildingBlockGenerator import BuildingBlockGenerator as BBG
 
 class spidroinBackboneGenerator(BBG):
-    # This is a class for generating a building block with a peptide backbone
-    # The input filename contains the backbone parameters, e.g betastrand and alphahelix.
-    # standard parameters for these are saved in the library directory.
-    # The strand is always from N to C terminus. If you want it C to N terminus then just
-    # rotate it. 
+    # This is a class for generating a spidroin coarse grain backbone. 
     
     def __init__(self, paramFilename):
         # initialise the parameter dictionary
