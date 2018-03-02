@@ -153,13 +153,13 @@ class ConstrainedPolymerPackBBG(BBG):
             fIO.saveXYZList(xyzVals, self.blockNames, 'pointBMinimised.xyz')
 
         print "Randomising chain using crankshaft moves."
-        #xyzVals = self.crankShaftMoves(xyzVals, self.numCrankMoves, 1)
+        xyzVals, numValidMoves = self.crankShaftMoves(xyzVals, self.numCrankMoves, 1)
 
         if self.dumpInterimFiles==1 and self.numCrankMoves > 0:
             fIO.saveXYZList(xyzVals, self.blockNames, 'crankedChain.xyz')
         
         
-        print "Ensuring structure is inside envelope"
+        print "Folding structure up."
         xyzVals = self.foldInsideEnvelope(xyzVals)
 
         if self.dumpInterimFiles==1:

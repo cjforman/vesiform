@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import time
 import Utilities.fileIO as fIO
+import Utilities.coordSystems as coords
 import itertools as it
 import random as rnd
 from Library.constrainedPolymer import ConstrainedPolymerPackBBG as CPBBG
@@ -9,7 +10,6 @@ from Library.SpidroinBackbone import spidroinBackboneGenerator as SBBG
 
 class spidroinHairpinGenerator(CPBBG):
     ''' '''
-
       
     def __init__(self, paramFilename):
         # initialise the parameter dictionary for the base classes
@@ -54,12 +54,14 @@ class spidroinHairpinGenerator(CPBBG):
             self.numPQUnits = self.SP2NumGUnits + 1
     
         self.numPoints = self.numGUnits * 3 + self.numPQUnits * 3  
-        self.directorHat = np.array([0.0, 0.0, 1.0])
         self.minDist = minDist
         
         # set up the right reference points
         self.pointA = pointA
         self.pointB = pointB
+        
+        # calculate the block director
+        self.blockDirectorHat = self.generateBuildingBlockDirector()
         
         # set the variables that need to be set to perform checking of pointsA and B
         self.blockRefPoint = self.generateBuildingBlockRefPoint()
@@ -87,12 +89,18 @@ class spidroinHairpinGenerator(CPBBG):
         
 
     def generateSpaceCurve(self):
-        # Over-rides the generate space curve function of the parent to generate a peptide backbone
-        # and a pseudo energy landscape approach to find an initial chain with the end point fixed
-        # at point B.
-        # create a regular backBone using PointsA as the first residue
+        # Over-rides the generate space curve function of the parent to generate a spidroin coarse grained backbone
         spidroinBackbone = self.SBBG.generateBuildingBlock(self.minDist, self.species)
-        return spidroinBackbone.getAtomsXYZ()  
+        # place the first atom in the building block at point A
+        spidroinBackbone.placeAtom(0, self.pointA)
+
+        # find the current axis of the system        
+        currentAxis = coords.axisFromHelix(spidroinBackbone.getAtomsXYZ())
+        currentRefPoint = self.pointA
+        
+        # return the coords such that the system is rotated along the pointA pointB axis with the first point at pointA
+        return coords.transformFromBlockFrameToLabFrame(self.blockDirectorHat, self.pointA, 0.0, currentAxis, currentRefPoint, spidroinBackbone.getAtomsXYZ())
+          
 
     def foldInsideEnvelope(self, xyzVals):
 
@@ -150,16 +158,16 @@ class spidroinHairpinGenerator(CPBBG):
                 if curPE < minPE:
                     lowestEnergyConfiguration = xyzVals[:]
                     minPE = curPE
-                    maxStepRange = min(1.0, deltaPE/self.energyScale)
+                    maxStepRange = min(1.0, abs(deltaPE)/self.energyScale)
                     
                     curMin += 1 
                     self.outline2(numMoves, self.maxNumFoldingMoves, deltaPE, minPE, maxStepRange )
                     if curMin <= 20 and self.dumpInterimFiles==1:
-                        fIO.saveXYZ(lowestEnergyConfiguration, 'Be', 'min_' + str(curMin) + '.xyz')
+                        fIO.saveXYZ(lowestEnergyConfiguration, 'Be', 'foldMin_' + str(curMin) + '.xyz')
                     if curMin > 20 and curMin % 10 ==0 and self.dumpInterimFiles==1:
-                        fIO.saveXYZ(lowestEnergyConfiguration, 'Be', 'min_' + str(curMin) + '.xyz')
+                        fIO.saveXYZ(lowestEnergyConfiguration, 'Be', 'foldMin_' + str(curMin) + '.xyz')
                     if curMin > 100 and curMin % 100 ==0 and self.dumpInterimFiles==1:
-                        fIO.saveXYZ(lowestEnergyConfiguration, 'Be', 'min_' + str(curMin) + '.xyz')
+                        fIO.saveXYZ(lowestEnergyConfiguration, 'Be', 'foldMin_' + str(curMin) + '.xyz')
                     
             numMoves += 1
             
@@ -168,7 +176,7 @@ class spidroinHairpinGenerator(CPBBG):
         
         return lowestEnergyConfiguration
 
-    def outline2(self, n, dE, M, E, R):
+    def outline2(self, n, M, dE, E, R):
         print n, "out of ", M, "deltaE", dE, "minEnergy:", E, "maxStepRange:", R
     
     
@@ -191,7 +199,8 @@ class spidroinHairpinGenerator(CPBBG):
             
         # add the cross over terms - only include a repulsive term
         for pair in GPQPairs:
-            PE += self.LJRep(np.linalg.norm(xyzVals[pair[0]] - xyzVals[pair[1]]), self.PQGEpsilon, self.PQGRm)
+            curPE = self.LJRep(np.linalg.norm(xyzVals[pair[0]] - xyzVals[pair[1]]), self.PQGEpsilon, self.PQGRm)
+            PE += curPE
 
         return PE
 
@@ -244,7 +253,7 @@ if __name__ == "__main__":
     pointB = np.array([0.0, 0.0, 0.0])
     
     minDist = 1.0
-    numCrankMoves = 10
+    numCrankMoves = 100
     
     # build building block and dump to file
     hairpinBuildingBlock = hairPinGen.generateBuildingBlock('SP1', pointA, pointB, minDist, numCrankMoves)
