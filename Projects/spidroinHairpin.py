@@ -78,7 +78,7 @@ class spidroinHairpinGenerator(CPBBG):
             time.sleep(3)
 
         bondLength = 1.0
-        return CPBBG.generateBuildingBlock(self, self.numPoints, pointA, pointB, minDist, bondLength, numCrankMoves) 
+        return CPBBG.generateBuildingBlock(self, self.numPoints, pointA, pointB, minDist, bondLength, numCrankMoves, envelopeList=envelopeList) 
 
     def generateAllowedList(self, short=False):
         # ensure the names are named correctly 
@@ -104,6 +104,16 @@ class spidroinHairpinGenerator(CPBBG):
 
     def foldInsideEnvelope(self, xyzVals):
 
+        # fold the structure inside any given envelope
+        print "Folding structure into envelope"
+        xyzVals= CPBBG.foldInsideEnvelope(self, xyzVals)
+        
+        numOutOfBoundsToStart = self.checkAllPointsInBounds(xyzVals)
+        
+        # then minimise the structure for energy by performing crankmoves
+
+        print "minimising energy of structure"
+
         self.forcePointsG = [ i for i, name in enumerate(self.blockNames) if name=='B' ]
         self.forcePointsPQ = [ i for i, name in enumerate(self.blockNames) if name=='P' ]
         
@@ -120,10 +130,13 @@ class spidroinHairpinGenerator(CPBBG):
         curMin = 0
         while np.abs(deltaPE) > self.energyEpsilon and numMoves < self.maxNumFoldingMoves:
 
-            # compute new conformation based on a random crankshaft move
+            # compute new conformation based on a random crankshaft move. If it self intersects or goes outside the envelope then reject it.
             newXYZ, numValidMoves = self.crankShaftMoves(curXYZVals, 1, maxStepRange)
+            outOfBounds = self.checkAllPointsInBounds(newXYZ)
+            if len(outOfBounds) > len(numOutOfBoundsToStart):
+                numValidMoves = 0
 
-            # only compute a new energy if we actually moved (other DeltaPE will be zero!)
+            # only compute a new energy if we actually moved successfully (no self-intersection, didn't increase num out of bounds, DeltaPE not going to be zero)
             if numValidMoves==1:
                 # compute energy 
                 newPE = self.PE2(newXYZ)   
@@ -158,7 +171,7 @@ class spidroinHairpinGenerator(CPBBG):
                 if curPE < minPE:
                     lowestEnergyConfiguration = xyzVals[:]
                     minPE = curPE
-                    maxStepRange = min(1.0, abs(deltaPE)/self.energyScale)
+                    maxStepRange = min(0.1, abs(deltaPE)/self.energyScale)
                     
                     curMin += 1 
                     self.outline2(numMoves, self.maxNumFoldingMoves, deltaPE, minPE, maxStepRange )
@@ -185,7 +198,7 @@ class spidroinHairpinGenerator(CPBBG):
 
         GUnitPairs = it.combinations(self.forcePointsG, 2)
         PQUnitPairs = it.combinations(self.forcePointsPQ, 2)
-        GPQPairs = it.product(self.forcePointsPQ, self.forcePointsG)
+        #GPQPairs = it.product(self.forcePointsPQ, self.forcePointsG)
         
         # add the pairwise G units
         for pair in GUnitPairs:
@@ -198,9 +211,9 @@ class spidroinHairpinGenerator(CPBBG):
             PE += self.LJRep(np.linalg.norm(xyzVals[pair[0]] - xyzVals[pair[1]]), self.PQEpsilon, self.PQRm)
             
         # add the cross over terms - only include a repulsive term
-        for pair in GPQPairs:
-            curPE = self.LJRep(np.linalg.norm(xyzVals[pair[0]] - xyzVals[pair[1]]), self.PQGEpsilon, self.PQGRm)
-            PE += curPE
+        # for pair in GPQPairs:
+        #    curPE = self.LJRep(np.linalg.norm(xyzVals[pair[0]] - xyzVals[pair[1]]), self.PQGEpsilon, self.PQGRm)
+        #    PE += curPE
 
         return PE
 
@@ -249,13 +262,14 @@ if __name__ == "__main__":
     
     # generate starting points and move the seed to those points extracting
     # the xyzVals each time. 
-    pointA = np.array([10.0, 10.0, 10.0])
-    pointB = np.array([0.0, 0.0, 0.0])
+    pointA = np.array([10.0, 0.0, 0.0])
+    pointB = np.array([-10.0, 0.0, 0.0])
     
     minDist = 1.0
-    numCrankMoves = 100
+    numCrankMoves = 0
+    envelopeList = ['innersphere 9.0', 'frustum 0.0 40.0 -30.0 40.0']
     
     # build building block and dump to file
-    hairpinBuildingBlock = hairPinGen.generateBuildingBlock('SP1', pointA, pointB, minDist, numCrankMoves)
+    hairpinBuildingBlock = hairPinGen.generateBuildingBlock('SP1', pointA, pointB, minDist, numCrankMoves, envelopeList=envelopeList, visualiseEnvelope=(1000000,100))
     hairpinBuildingBlock.exportBBK(fIO.fileRootFromInfile(filename, 'txt'))
     print "hairpin done"

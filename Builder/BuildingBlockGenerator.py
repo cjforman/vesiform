@@ -232,7 +232,7 @@ class BuildingBlockGenerator(keyProc):
             # makes sure that the pos is in the +ve Z half space
             try:
                 envelopeParams = self.envelopeSummary['halfspace']
-                if pos[2]>0:
+                if pos[2]>envelopeParams[0]:
                     inBounds=False
                     if self.verbose==1:
                         print "halfspace Violation"                    

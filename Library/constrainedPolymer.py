@@ -329,10 +329,10 @@ class ConstrainedPolymerPackBBG(BBG):
     def foldInsideEnvelope(self, xyzVals):
         
         # Perform a random crank shaft using the allowed list. If there are points intersecting reject it out of hand.
-        # if there are less points outside the zone than previously accept it.
+        # if there are less points outside the zone accept it.
         # if there are more points outside the zone then accept it with a probability that depends
         # exponentially on the difference between the current minimum number of points inside.
-
+        
         # check which indices are outside the array
         curIndicesOutside = self.checkEnvelope(xyzVals)
         curXYZVals = xyzVals

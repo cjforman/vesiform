@@ -14,9 +14,9 @@ numA = 30
 numB = 40
 numMonomersPerPolymer = numA + numB
 numPolymersPerSphere =  1100 # 1180
-FMaxRadius = 9.25
+FMaxRadius = 10.0
 FMinRadius = 3.00
-FZ1 = 120
+FZ1 = 150
 FZ2 = 40
 alpha1= 60
 alpha2 = 80
@@ -27,7 +27,7 @@ AtomicMinDist = 1.0
 centerPos = np.array([0.0, 0.0, 0.0])
 
 # generate the XYZVals in the packed spaced
-Polymer1SphereBB = SphereBBG.generateBuildingBlock(numPolymersPerSphere, FZ1, -90, 90, -180, 180, FMaxRadius)
+Polymer1SphereBB = SphereBBG.generateBuildingBlock(numPolymersPerSphere, FZ2, -90, 90, -180, 180, FMinRadius)
 Polymer1SphereBB.transformBBToLabFrame(np.array([0.0, 0.0, 1.0]), centerPos, 0.0)
 Polymer1SphereBB.exportBBK("sphereBasePoints")
 Polymer1SpherePoints = Polymer1SphereBB.blockXYZVals 
