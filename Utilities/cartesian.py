@@ -104,3 +104,84 @@ def vectorBetweenTwoPoints(p1, p2 = np.array([0.0, 0.0, 0.0]), direction='TwoToO
         director = p2 - p1
     d = np.linalg.norm(director)
     return director/d
+
+def clamp(val, valMin, valMax):
+    retVal = val
+    if val < valMin:
+        retVal = valMin
+    if val> valMax:
+        retVal = valMax
+    return retVal
+
+def closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2):
+    # finds the square of the distance between the closest points of 
+    # approach on two line segments between p1 and q1 and p2 and q2.
+    # Works by computing s and t - the displacement parameters along the 
+    # line's equations:
+    # r(s) = p1 + s * (q1 - p1)
+    # r(t) = p2 + t * (q2 - p2)  
+    
+    d1 = q1 - p1 # line directors
+    d2 = q2 - p2 # line directors
+    r = p1 - p2 # vector between lines
+    a = np.dot(d1, d1) # squared length of segment 1
+    e = np.dot(d2, d2) # square length of segment 2
+    f = np.dot(d2, r)
+    epsilon = 1e-10
+    
+    # check if both segments are of zero length (degenerate into points)
+    if (a <= epsilon) and (e <= epsilon):
+        s = t = 0.0
+ 
+    if (a <= epsilon):
+        # first segment is a point
+        s = 0.0
+        t = f/e # s=0 => t = (b*s + f)/e = f/e
+        t = clamp(t, 0, 1)
+    else:
+        c = np.dot(d1, r)
+        if (e <= epsilon):
+            # second segment degenerates into a point
+            t = 0.0
+            s = clamp(-c/a, 0.0, 1.0) # t = 0 => s = (b*t - c)/a = -c/a
+        else:
+            # general non-degenerate case starts here
+            b = np.dot(d1, d2)
+            denom = a*e - b*b  # always non-negative
+    
+            # if segments not parallel compute closest point on L1 to L2 and 
+            # clamp to segment S1. Else pick arbitrary s (here 0).
+            if (denom > epsilon):
+                s = clamp((b * f - c * e)/denom, 0.0, 1.0)
+            else:
+                s = 0.0
+    
+            # compute point on L2 cloest to s1(s) using
+            # t = dot( (p1 + D1 * s) - P2, D2 ) / dot(d2, d2) = (b*s + f)/e
+            t = (b * s + f)/e
+            
+            # if t in 0, 1 we are done. else clamp t, recompute s for new
+            # value of t using s = dot((P2 + d2*t) - p1, d1) / dot(d1, d1) = 
+            # (t *b -c)/a and clamp s to [0,1]
+            if (t < 0.0):
+                t = 0.0
+                s = clamp( - c /a, 0.0, 1.0)
+            elif (t > 1.0):
+                t = 1.0
+                s = clamp( (b-c) /a, 0, 1.0)
+                
+    c1 = p1 + d1 * s
+    c2 = p2 + d2 * t
+    
+    return np.dot(c1 - c2, c1 - c2)
+
+if __name__ == "__main__":
+    
+    p1 = np.array([-10.0, 0.0, 0.0])
+    q1 = np.array([ -1.0, 0.0, 0.0])
+    p2 = np.array([ 0.0, -10.0, 2.0])
+    q2 = np.array([ 0.0, -1.0, 2.0])
+    
+    d = closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2)
+    print d
+     

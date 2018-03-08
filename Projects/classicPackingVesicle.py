@@ -5,66 +5,122 @@ import Utilities.coordSystems as coords
 import Utilities.fileIO as fIO
 
 SphereBBG = SPSBBG('SurfacePackSphere.txt')
-
-bondlength = 1.5
-
-Polymer1Generator = RPBBG('RandomPolymer.txt')
+PolymerGenerator = RPBBG('RandomPolymer.txt')
 
 numA = 30
 numB = 40
 numMonomersPerPolymer = numA + numB
-numPolymersPerSphere =  1100 # 1180
-FMaxRadius = 10.0
-FMinRadius = 3.00
-FZ1 = 150
-FZ2 = 40
-alpha1= 60
-alpha2 = 80
-beta1= 130
-beta2 = 170
-AtomicMinDist = 1.0
+bondLength = 1.5
+maxPolymerLength = float(numMonomersPerPolymer) * bondLength
+minRadius = 50
+midLayerRadius = minRadius + maxPolymerLength
+minTheta = -90
+maxTheta = 90
+minPhi = -135
+maxPhi = 135
+
+numPolymersPerOuterSphere = 1100
+outerSphereFrustumOuterZ = midLayerRadius + bondLength/2.0 + maxPolymerLength  
+outerSphereFrustumInnerZ = midLayerRadius + bondLength/2.0
+outerSphereFrustumOuterRadius = np.sqrt(0.75 * 4.0  * np.power(outerSphereFrustumOuterZ, 2.0) / numPolymersPerOuterSphere)  
+outerSphereFrustumInnerRadius = np.sqrt(0.75 * 4.0  * np.power(outerSphereFrustumInnerZ, 2.0) / numPolymersPerOuterSphere)
+outerPolymerDihedralMin = 50
+outerPolymerDihedralMax = 90
+outerPolymerBondAngleMin = 100
+outerPolymerBondAngleMax = 170
+
+numPolymersPerInnerSphere = 500
+innerSphereFrustumOuterZ = midLayerRadius - bondLength/2.0 
+innerSphereFrustumInnerZ = midLayerRadius - bondLength/2.0 - maxPolymerLength
+innerSphereFrustumOuterRadius = np.sqrt(0.75 * 4.0  * np.power(innerSphereFrustumOuterZ, 2.0) / numPolymersPerInnerSphere)
+innerSphereFrustumInnerRadius = np.sqrt(0.75 * 4.0  * np.power(innerSphereFrustumInnerZ, 2.0) / numPolymersPerInnerSphere)
+innerPolymerDihedralMin = 60
+innerPolymerDihedralMax = 80
+innerPolymerBondAngleMin = 130
+innerPolymerBondAngleMax = 170
+
+print "Outer: numPolymers:", numPolymersPerOuterSphere, "outerZ:", outerSphereFrustumOuterZ, "outerR", outerSphereFrustumOuterRadius, "innerZ:", outerSphereFrustumInnerZ, "innerR", outerSphereFrustumInnerRadius    
+print "Inner: numPolymers:", numPolymersPerInnerSphere, "outerZ:", innerSphereFrustumOuterZ, "outerR", innerSphereFrustumOuterRadius, "innerZ:", innerSphereFrustumInnerZ, "innerR", innerSphereFrustumInnerRadius
+
+atomicMinDist = 1.0
 
 centerPos = np.array([0.0, 0.0, 0.0])
 
-# generate the XYZVals in the packed spaced
-Polymer1SphereBB = SphereBBG.generateBuildingBlock(numPolymersPerSphere, FZ2, -90, 90, -180, 180, FMinRadius)
-Polymer1SphereBB.transformBBToLabFrame(np.array([0.0, 0.0, 1.0]), centerPos, 0.0)
-Polymer1SphereBB.exportBBK("sphereBasePoints")
-Polymer1SpherePoints = Polymer1SphereBB.blockXYZVals 
-Polymer1SpherePointsSPolar = [ coords.XYZ2SphericalPolar(pos) for pos in Polymer1SphereBB.blockXYZVals]
+# generate the outer sphere root positions at the mid layer radius and their directors pointing out from the center 
+PolymerSphereOuterBB = SphereBBG.generateBuildingBlock(numPolymersPerOuterSphere, outerSphereFrustumInnerZ, minTheta, maxTheta, minPhi, maxPhi, outerSphereFrustumInnerRadius)
+PolymerSphereOuterBB.transformBBToLabFrame(np.array([0.0, 0.0, 1.0]), centerPos, 0.0)
+PolymerSphereOuterBB.exportBBK("OuterSphereBasePoints")
+PolymerSphereOuterPoints = PolymerSphereOuterBB.blockXYZVals 
+PolymerSphereOuterPointsPolar = [ coords.XYZ2SphericalPolar(pos) for pos in PolymerSphereOuterBB.blockXYZVals]
+outerDirectorsHat = [ coords.sphericalPolar2XYZ(np.array([1.0, pos[1], pos[2]]) ) for pos in PolymerSphereOuterPointsPolar]
 
-Polymer1SpherePoints = [ coords.sphericalPolar2XYZ(np.array([FZ2, pos[1], pos[2]]) ) for pos in Polymer1SpherePointsSPolar]
-directorsHat = [ coords.sphericalPolar2XYZ(np.array([1.0, pos[1], pos[2]]) ) for pos in Polymer1SpherePointsSPolar]
+# generate the inner sphere root positions at the mid layer radius and their directors pointing in towards the center
+PolymerSphereInnerBB = SphereBBG.generateBuildingBlock(numPolymersPerInnerSphere, innerSphereFrustumOuterZ, minTheta, maxTheta, minPhi, maxPhi, innerSphereFrustumOuterRadius)
+PolymerSphereInnerBB.transformBBToLabFrame(np.array([0.0, 0.0, 1.0]), centerPos, 0.0)
+PolymerSphereInnerBB.exportBBK("OuterSphereBasePoints")
+PolymerSphereInnerPoints = PolymerSphereInnerBB.blockXYZVals 
+PolymerSphereInnerPointsPolar = [ coords.XYZ2SphericalPolar(pos) for pos in PolymerSphereInnerBB.blockXYZVals]
+innerDirectorsHat = [ -1.0 * coords.sphericalPolar2XYZ(np.array([1.0, pos[1], pos[2]]) ) for pos in PolymerSphereInnerPointsPolar]
 
-envelopeList = ['frustum ' + str(FZ1) + ' ' + str(FMaxRadius) + ' ' +str(FZ2-AtomicMinDist) + ' ' +str(FMinRadius)]
+print "Outer: numPolymers:", numPolymersPerOuterSphere, "outerZ:", outerSphereFrustumOuterZ, "outerR", outerSphereFrustumOuterRadius, "innerZ:", outerSphereFrustumInnerZ, "innerR", outerSphereFrustumInnerRadius    
+print "Inner: numPolymers:", numPolymersPerInnerSphere, "outerZ:", innerSphereFrustumOuterZ, "outerR", innerSphereFrustumOuterRadius, "innerZ:", innerSphereFrustumInnerZ, "innerR", innerSphereFrustumInnerRadius
 
-polymerStartPoint = np.array([0.0, 0.0, FZ2])
-polymer1Strands = [ Polymer1Generator.generateBuildingBlock(numMonomersPerPolymer, 
-                                                polymerStartPoint,
-                                                alpha1,
-                                                alpha2,
-                                                beta1, 
-                                                beta2,
-                                                AtomicMinDist,
-                                                bondlength,
-                                                envelopeList=envelopeList,
-                                                visualiseEnvelope=(0, 200)) for _ in range(numPolymersPerSphere) ]
 
-[  strand.setBlockRefPoint(polymerStartPoint) for strand in polymer1Strands ]
-
-names =  ['O'] * numA 
-names = np.concatenate( (names, ['C'] * numB), 0 ) 
-
-strandNum = 0
-for strand in polymer1Strands:
+# generate the outer polymers
+outerEnvelopeList = ['frustum ' + str(outerSphereFrustumOuterZ) + ' ' + str(outerSphereFrustumOuterRadius) + ' ' +str(outerSphereFrustumInnerZ - atomicMinDist) + ' ' +str(outerSphereFrustumInnerRadius)]
+outerPolymerStartPoint = np.array([0.0, 0.0, outerSphereFrustumInnerZ])
+outerPolymerStrands = []
+names =  ['O'] * numA # red Hydrophobic
+names = np.concatenate( (names, ['C'] * numB), 0 ) # blue hydrophilic (later monomers blue are towards outer shell) 
+for strandNum in range(numPolymersPerOuterSphere): 
+    print "starting strand: ", strandNum
+    envelopeSize = 0
+    if strandNum == 0:
+        envelopeSize = 1000000
+    strand = PolymerGenerator.generateBuildingBlock( numMonomersPerPolymer, 
+                                                     outerPolymerStartPoint,
+                                                     outerPolymerDihedralMin,
+                                                     outerPolymerDihedralMax,
+                                                     outerPolymerBondAngleMin, 
+                                                     outerPolymerBondAngleMin,
+                                                     atomicMinDist,
+                                                     bondLength,
+                                                     envelopeList=outerEnvelopeList,
+                                                     visualiseEnvelope=(envelopeSize, 400, 'outerEnvelope.xyz'))
+    strand.setBlockRefPoint(outerPolymerStartPoint)
     strand.blockAtomNames = names[:]
-    strand.exportBBK("strand" + str(strandNum))
-    strandNum += 1
+    strand.exportBBK("outer_strand_" + str(strandNum))
+    outerPolymerStrands.append(strand)
+
+# generate the inner polymers
+innerSphereFrustumInnerZInverted = innerSphereFrustumOuterZ - innerSphereFrustumInnerZ + innerSphereFrustumOuterZ 
+innerEnvelopeList = ['frustum ' + str(innerSphereFrustumOuterZ - atomicMinDist) + ' ' + str(innerSphereFrustumOuterRadius) + ' ' +str(innerSphereFrustumInnerZInverted) + ' ' +str(innerSphereFrustumInnerRadius)]
+innerPolymerStartPoint = np.array([0.0, 0.0, innerSphereFrustumOuterZ])
+innerPolymerStrands = []
+for strandNum in range(numPolymersPerInnerSphere): 
+    print "starting strand: ", strandNum
+    envelopeSize = 0
+    if strandNum == 0:
+        envelopeSize = 1000000
+    strand = PolymerGenerator.generateBuildingBlock( numMonomersPerPolymer, 
+                                                     innerPolymerStartPoint,
+                                                     innerPolymerDihedralMin,
+                                                     innerPolymerDihedralMax,
+                                                     innerPolymerBondAngleMin, 
+                                                     innerPolymerBondAngleMin,
+                                                     atomicMinDist,
+                                                     bondLength,
+                                                     envelopeList=innerEnvelopeList,
+                                                     visualiseEnvelope=(envelopeSize, 400, 'innerEnvelope.xyz'))
+    strand.setBlockRefPoint(innerPolymerStartPoint)
+    strand.blockAtomNames = names[:]
+    strand.exportBBK("inner_strand_" + str(strandNum))
+    innerPolymerStrands.append(strand)
 
 AllNames = []
 
 curStrand = 0
-for director, pos, strand in zip(directorsHat, Polymer1SpherePoints, polymer1Strands):
+for director, pos, strand in zip(outerDirectorsHat, PolymerSphereOuterPoints, outerPolymerStrands):
     strand.transformBBToLabFrame(director, pos, 0.0)
     if curStrand==0:
         xyzVals = strand.blockXYZVals
@@ -74,6 +130,12 @@ for director, pos, strand in zip(directorsHat, Polymer1SpherePoints, polymer1Str
         allNames = np.concatenate( (allNames, strand.blockAtomNames), 0)
     curStrand += 1
 
+for director, pos, strand in zip(innerDirectorsHat, PolymerSphereInnerPoints, innerPolymerStrands):
+    strand.transformBBToLabFrame(director, pos, 0.0)
+    xyzVals = np.concatenate((xyzVals, strand.blockXYZVals), 0)
+    allNames = np.concatenate( (allNames, strand.blockAtomNames), 0)
+    curStrand += 1
+
 fIO.saveXYZList(xyzVals, allNames, "Vesicle.xyz")
 
-print "example done"
+print "classic vesicle example done"

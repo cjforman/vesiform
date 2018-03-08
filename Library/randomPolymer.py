@@ -83,7 +83,7 @@ class RandomPolymerPackBBG(BBG):
                                minDist,
                                bondLength,
                                pointsToAvoid=[],
-                               visualiseEnvelope=(0,20),
+                               visualiseEnvelope=(0,20, 'envelope.xyz'),
                                envelopeList=["None"],
                                showBlockDirector=False):
 
