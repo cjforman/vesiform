@@ -105,7 +105,6 @@ class ConstrainedPolymerPackBBG(BBG):
         blockDirector = self.generateBuildingBlockDirector()
         self.blockDirectorHat = blockDirector/np.linalg.norm(blockDirector)
         self.blockRefPoint= self.generateBuildingBlockRefPoint()
-        self.parseEnvelopeList(envelopeList)
         
         # from the points to avoid list only remember those that would pass the specified envelope test
         self.pointsToAvoid = pointsToAvoid
@@ -153,13 +152,13 @@ class ConstrainedPolymerPackBBG(BBG):
             fIO.saveXYZList(xyzVals, self.blockNames, 'pointBMinimised.xyz')
 
         print "Randomising chain using crankshaft moves."
-        #xyzVals = self.crankShaftMoves(xyzVals, self.numCrankMoves, 1)
+        xyzVals, numValidMoves = self.crankShaftMoves(xyzVals, self.numCrankMoves, 1)
 
         if self.dumpInterimFiles==1 and self.numCrankMoves > 0:
             fIO.saveXYZList(xyzVals, self.blockNames, 'crankedChain.xyz')
         
         
-        print "Ensuring structure is inside envelope"
+        print "Folding structure up."
         xyzVals = self.foldInsideEnvelope(xyzVals)
 
         if self.dumpInterimFiles==1:
@@ -329,10 +328,10 @@ class ConstrainedPolymerPackBBG(BBG):
     def foldInsideEnvelope(self, xyzVals):
         
         # Perform a random crank shaft using the allowed list. If there are points intersecting reject it out of hand.
-        # if there are less points outside the zone than previously accept it.
+        # if there are less points outside the zone accept it.
         # if there are more points outside the zone then accept it with a probability that depends
         # exponentially on the difference between the current minimum number of points inside.
-
+        
         # check which indices are outside the array
         curIndicesOutside = self.checkEnvelope(xyzVals)
         curXYZVals = xyzVals
@@ -343,7 +342,7 @@ class ConstrainedPolymerPackBBG(BBG):
         maxStepScale = 1.0
         numMoves = 0
         curMin = 0
-        
+        threshold = 1.0
         while minNumIndicesOutside > 0 and numMoves < self.maxNumFoldingMoves:
             
             # Do the crank shaft move on the current working set. 
@@ -355,47 +354,50 @@ class ConstrainedPolymerPackBBG(BBG):
             newIndicesOutside = self.checkEnvelope(newXYZVals)
             newNumIndicesOutside = len(newIndicesOutside)
         
-            # if a new global minimum number of indices inside the envelope then keep the move.
-            if newNumIndicesOutside < minNumIndicesOutside:
-                # keep a permanent log of the the new best set.
-                minXYZVals = newXYZVals[:]
-                minNumIndicesOutside = newNumIndicesOutside
-                minIndices = newIndicesOutside
+            if numValidMoves==1:
+                acceptedMove = False
+                # if a new global minimum number of indices inside the envelope then keep the move.
+                if newNumIndicesOutside < minNumIndicesOutside:
+                    acceptedMove = True
+                    # keep a permanent log of the the new best set.
+                    minXYZVals = newXYZVals[:]
+                    minNumIndicesOutside = newNumIndicesOutside
+                    minIndices = newIndicesOutside
+                    
+                    # update the working copy
+                    curXYZVals = newXYZVals[:]
+                    curNumIndicesOutside = newNumIndicesOutside
+                    
+                    curMin += 1
+                    if curMin<10 and self.dumpInterimFiles==1:
+                        fIO.saveXYZList(minXYZVals, self.blockNames, "foldMin" + str(curMin) + '.xyz')
+                    if curMin>10 and self.dumpInterimFiles==1 and curMin % 10==0:
+                        fIO.saveXYZList(minXYZVals, self.blockNames, "foldMin" + str(curMin) + '.xyz')
+                    if curMin>100 and self.dumpInterimFiles==1 and curMin % 100==0:
+                        fIO.saveXYZList(minXYZVals, self.blockNames, "foldMin" + str(curMin) + '.xyz')
                 
-                # update the working copy
-                curXYZVals = newXYZVals[:]
-                curNumIndicesOutside = newNumIndicesOutside
-                
-                curMin += 1
-                if curMin<10 and self.dumpInterimFiles==1:
-                    fIO.saveXYZList(minXYZVals, self.blockNames, "foldMin" + str(curMin) + '.xyz')
-                if curMin>10 and self.dumpInterimFiles==1 and curMin % 10==0:
-                    fIO.saveXYZList(minXYZVals, self.blockNames, "foldMin" + str(curMin) + '.xyz')
-                if curMin>100 and self.dumpInterimFiles==1 and curMin % 100==0:
-                    fIO.saveXYZList(minXYZVals, self.blockNames, "foldMin" + str(curMin) + '.xyz')
-                
-                
-                print "step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside
                  
-            # if the new move means that the num indices outside has gone up above the curXYZVals then 
-            # roll the die to decide whether or not to replace the curXYZVals
-            if newNumIndicesOutside >= curNumIndicesOutside:
-                # roll the die:
-                if rnd.uniform(0.0, 1.0) < np.exp( (minNumIndicesOutside - newNumIndicesOutside) / self.foldingTemp ): 
-                    # update the working copy of coords but don't replace the current global minimum
-                    curXYZVals = newXYZVals
-                    curNumIndicesOutside = newNumIndicesOutside 
+                # if the new move means that the num indices outside has gone up above the curXYZVals then 
+                # roll the die to decide whether or not to replace the curXYZVals
+                if newNumIndicesOutside >= minNumIndicesOutside:
+                    # roll the die. The larger the gap between newNum and minNum the smaller the threshold and the less likely we will accept the move and go back to the curXyzVals. 
+                    threshold = np.exp(-(float(newNumIndicesOutside - minNumIndicesOutside)) / self.foldingTemp)
+                    if rnd.uniform(0.0, 1.0) < threshold: 
+                        acceptedMove = True
+                        # update the working copy of coords but don't replace the current global minimum
+                        curXYZVals = newXYZVals
+                        curNumIndicesOutside = newNumIndicesOutside 
             
+                acceptedString = "rejected"
+                if acceptedMove==True:
+                    acceptedString = "accepted"
+                print "step:", numMoves, "out of", self.maxNumFoldingMoves, "minNumIndicesOutside:", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside, "threshold", threshold, acceptedString
             numMoves += 1
 
-            if numMoves % 10==0:                 
-                print "step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside
-        
         if minNumIndicesOutside > 0:
             print "Warning: there are points outside the envelope that were not moved inside."
             if self.dumpInterimFiles:
                 fIO.saveXYZ(minXYZVals[minIndices], 'B', 'outsideEnvelope.xyz')
-                
                 
         return minXYZVals
         

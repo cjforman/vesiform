@@ -83,7 +83,7 @@ class RandomPolymerPackBBG(BBG):
                                minDist,
                                bondLength,
                                pointsToAvoid=[],
-                               visualiseEnvelope=(0,20),
+                               visualiseEnvelope=(0,20, 'envelope.xyz'),
                                envelopeList=["None"],
                                showBlockDirector=False):
 
@@ -122,7 +122,17 @@ class RandomPolymerPackBBG(BBG):
         print [ np.linalg.norm(self.buildingBlockXYZ[i] - self.buildingBlockXYZ[i-1]) for i in range(1, len(self.buildingBlockXYZ)) ]       
         
     def generateAllowedList(self):
-        return [i for i in range(0, self.numPoints) ]
+        # increase probability of selecting points lower down the list
+        allowed=[]
+        numTimes = self.numPoints
+        for i in range(0, self.numPoints):
+            if i==0:
+                allowed = [i] * numTimes
+            else:
+                allowed = allowed + [i] * numTimes
+            numTimes -= 1
+        
+        return allowed
         
     def generateBuildingBlockXYZ(self):
         print "Generate initial conformation."
@@ -181,7 +191,7 @@ class RandomPolymerPackBBG(BBG):
         # can only do this if there are sufficient atoms in the array
         if len(xyzVals) > 3:
             # pick a random point in the allowedList
-            index = rnd.randint(0, len(self.allowedList) - 2)
+            index = rnd.randint(0, len(self.allowedList) - 3)
             # get the atom referred to in the allowedList
             axisAtom1Index = self.allowedList[index]
             

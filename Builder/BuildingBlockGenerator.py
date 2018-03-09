@@ -46,7 +46,7 @@ class BuildingBlockGenerator(keyProc):
             print "Critical Parameters are undefined for BuildingBlockGenerator"
             sys.exit()        
 
-    def generateBuildingBlock(self, numPoints, minDist, showBlockDirector=False, visualiseEnvelope=(0,20), envelopeList=['None'], pointsToAvoid=[]):
+    def generateBuildingBlock(self, numPoints, minDist, showBlockDirector=False, visualiseEnvelope=(0,20, 'envelope.xyz'), envelopeList=['None'], pointsToAvoid=[]):
         # Returns a building block object with numPoints xyz values and names.  
         # A reference point and principal direction of the building block are defined in the block Ref Frame.
             
@@ -62,7 +62,7 @@ class BuildingBlockGenerator(keyProc):
         # visualise envelope if requested
         if visualiseEnvelope[0]>0:
             print "Visualising envelope"
-            self.visualiseEnvelope(visualiseEnvelope[0], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[1])
+            self.visualiseEnvelope(visualiseEnvelope[0], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[2])
 
         # from the points to avoid list only remember those that would pass the specified envelope test
         print "dumping pointsToAvoid already excluded by envelope"
@@ -206,6 +206,9 @@ class BuildingBlockGenerator(keyProc):
                 Z2 = envelopeParams[2]
                 Radius2 = envelopeParams[3]
                 
+                ZMin = min(Z1, Z2)
+                ZMax = max(Z1, Z2)
+                
                 # principal axis of envelope is aligned with Z axis. 
                 # Compute radial distance from z axis and z height
                 zComponent = pos[2] 
@@ -215,7 +218,7 @@ class BuildingBlockGenerator(keyProc):
                     zComponent = 0.0
         
                 inBounds = True
-                if  zComponent > Z1 or zComponent < Z2:
+                if  zComponent > ZMax or zComponent < ZMin:
                     inBounds = False
                     if self.verbose==1:
                         print "frustum Z Violation"
@@ -232,7 +235,7 @@ class BuildingBlockGenerator(keyProc):
             # makes sure that the pos is in the +ve Z half space
             try:
                 envelopeParams = self.envelopeSummary['halfspace']
-                if pos[2]>0:
+                if pos[2]>envelopeParams[0]:
                     inBounds=False
                     if self.verbose==1:
                         print "halfspace Violation"                    
@@ -268,7 +271,7 @@ class BuildingBlockGenerator(keyProc):
 
         return inBounds
     
-    def visualiseEnvelope(self, N, X, Y, Z):
+    def visualiseEnvelope(self, N, X, Y, Z, filename):
         
         posList = [ np.array([rnd.uniform(-X, X), rnd.uniform(-Y, Y), rnd.uniform(-Z, Z) ]) for _ in range(N) ]
 
@@ -280,7 +283,7 @@ class BuildingBlockGenerator(keyProc):
             if self.checkPointInBounds(pos, ignorePTA=True):
                 posOut.append(pos)
             n += 1
-        fIO.saveXYZ(posOut, 'Ne', "envelopePacked.xyz")
+        fIO.saveXYZ(posOut, 'Ne', filename)
         
         return
     
