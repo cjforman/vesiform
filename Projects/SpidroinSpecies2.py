@@ -226,10 +226,10 @@ if __name__=="__main__":
     rotation = 0.0
     minDist = 1.0
     
-    SpidroinSpecies1BB = spidroinProteinGenerator.generateBuildingBlock( species2,
+    SpidroinSpecies2BB = spidroinProteinGenerator.generateBuildingBlock( species2,
                                                                          minDist,
                                                                          showBlockDirector=False)  
-    SpidroinSpecies1BB.exportBBK('species2Spidroin.xyz')
+    SpidroinSpecies2BB.exportBBK('species2Spidroin.xyz')
 
     print("Spidroin Species 2 Done.")
         
