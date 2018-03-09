@@ -7,7 +7,6 @@ import numpy as np
 import random as rnd
 import cartesian as cart
 import Utilities.fileIO as FIO
-from webbrowser import register_X_browsers
 
 # ***** Co-ordinate system specific functions ****** 
 
@@ -227,6 +226,35 @@ def transformFromLabFrameToBlockFrame(labDirector, labRefPoint, labRotation, blo
     # rotate each point in the xyzCoords by the calculated angle about the 
     # calculated axis through the block Reference point. 
     return [ cart.rotPAboutAxisAtPoint(pos, blockRefPoint, rotAxis, -rotAngle) for pos in xyzVals]
+
+def convertTriplesToEllipsoids(blockNames, xyzVals, aAxis, cAxis):
+    eAtomNames = [ grainName for grainName in blockNames if grainName in ['P', 'B']]  
+    ePositions = [ pos for pos, grainName in zip(xyzVals, blockNames) if grainName in ['P', 'B']]
+    eSizes = [ [2*aAxis, np.linalg.norm(xyzVals[i - 1] - xyzVals[i + 1]), 2*cAxis] for i, grainName in enumerate(blockNames[0:-1]) if grainName in ['P', 'B']] 
+    eRs = [ XYZPointsToOrientationMat(xyzVals[i - 1], xyzVals[i + 1]) for i, grainName in enumerate(blockNames[0:-1]) if grainName in ['P', 'B']]
+    eRotVecs = [ eR[1] for eR in eRs]
+    return eAtomNames, ePositions, eSizes, eRs, eRotVecs
+
+def XYZPointsToOrientationMat(pos1, pos2):
+        # Computes the unit vector between two points, and two further orthogonal vectors.
+        # The first orthogonal vector is a vector orthogonal to the unitVector in the XYPlane.
+        # This is found by projecting the first unit into the xy plane, and then finding a 
+        # second vector in the plane, and doing a gram-Schmit orthogonalisation. 
+        # The second orthogonal vector is the cross product of the first two unit vectors.
+        bVec = (pos1-pos2)
+        bVecHat = bVec/np.linalg.norm(bVec)
+        xyPlaneVec = np.array([bVecHat[0], bVecHat[1], 0.0])
+        xyPlaneVecHat = xyPlaneVec/np.linalg.norm(xyPlaneVec)
+        if np.abs(xyPlaneVecHat[1]) < 1e-10:
+            otherXYPlaneVec = xyPlaneVecHat + np.array([1.0, 1.0, 0,0])
+        else:
+            otherXYPlaneVec = xyPlaneVecHat + np.array([1.0, 0.0, 0.0])
+        otherXYPlaneVecOrth = otherXYPlaneVec - np.dot(otherXYPlaneVec, xyPlaneVecHat) * xyPlaneVec
+        otherXYPlaneVecOrthHat = otherXYPlaneVecOrth/np.linalg.norm(otherXYPlaneVecOrth) 
+        
+        finalVec = np.cross(otherXYPlaneVecOrthHat, bVecHat)
+        return np.array([otherXYPlaneVecOrthHat, bVecHat, finalVec])
+
     
 def constructTNBFrame(p1, p2, p3):
     # given three arbitrary points defined in the lab XYZ frame, this function constructs 
