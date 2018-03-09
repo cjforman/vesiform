@@ -8,9 +8,10 @@ SphereBBG = SPSBBG('SurfacePackSphere.txt')
 PolymerGenerator = RPBBG('RandomPolymer.txt')
 
 numA = 30
-numB = 40
+numB = 50
 numMonomersPerPolymer = numA + numB
 bondLength = 1.5
+atomicMinDist = 1.0
 maxPolymerLength = float(numMonomersPerPolymer) * bondLength
 minRadius = 50
 midLayerRadius = minRadius + maxPolymerLength
@@ -19,30 +20,44 @@ maxTheta = 90
 minPhi = -135
 maxPhi = 135
 
-numPolymersPerOuterSphere = 1100
-outerSphereFrustumOuterZ = midLayerRadius + bondLength/2.0 + maxPolymerLength  
-outerSphereFrustumInnerZ = midLayerRadius + bondLength/2.0
-outerSphereFrustumOuterRadius = np.sqrt(0.75 * 4.0  * np.power(outerSphereFrustumOuterZ, 2.0) / numPolymersPerOuterSphere)  
-outerSphereFrustumInnerRadius = np.sqrt(0.75 * 4.0  * np.power(outerSphereFrustumInnerZ, 2.0) / numPolymersPerOuterSphere)
-outerPolymerDihedralMin = 50
-outerPolymerDihedralMax = 90
-outerPolymerBondAngleMin = 100
-outerPolymerBondAngleMax = 170
+innerSphereFrustumInnerRadius = 2 * bondLength # initialising variable
+# loop until the innerSphere inner R is 1.5 * bondLength
+numPolymersPerInnerSphere = 1
+while innerSphereFrustumInnerRadius > 1.5 * bondLength:
+    innerSphereFrustumOuterZ = midLayerRadius - bondLength/2.0 
+    innerSphereFrustumInnerZ = midLayerRadius - bondLength/2.0 - maxPolymerLength
+    innerSphereFrustumOuterRadius = np.sqrt(0.75 * 4.0  * np.power(innerSphereFrustumOuterZ, 2.0) / numPolymersPerInnerSphere)
+    innerSphereFrustumInnerRadius = np.sqrt(0.75 * 4.0  * np.power(innerSphereFrustumInnerZ, 2.0) / numPolymersPerInnerSphere)
+    numPolymersPerInnerSphere += 1 
 
-numPolymersPerInnerSphere = 500
-innerSphereFrustumOuterZ = midLayerRadius - bondLength/2.0 
-innerSphereFrustumInnerZ = midLayerRadius - bondLength/2.0 - maxPolymerLength
-innerSphereFrustumOuterRadius = np.sqrt(0.75 * 4.0  * np.power(innerSphereFrustumOuterZ, 2.0) / numPolymersPerInnerSphere)
-innerSphereFrustumInnerRadius = np.sqrt(0.75 * 4.0  * np.power(innerSphereFrustumInnerZ, 2.0) / numPolymersPerInnerSphere)
 innerPolymerDihedralMin = 60
 innerPolymerDihedralMax = 80
 innerPolymerBondAngleMin = 130
 innerPolymerBondAngleMax = 170
 
+
+# loop until the outerSphereinnerR is innerSphereOuterRadius
+outerSphereFrustumInnerRadius = 2 * innerSphereFrustumOuterRadius # initialising variable
+numPolymersPerOuterSphere = 1
+while outerSphereFrustumInnerRadius > innerSphereFrustumOuterRadius:
+    outerSphereFrustumOuterZ = midLayerRadius + bondLength/2.0 + maxPolymerLength  
+    outerSphereFrustumInnerZ = midLayerRadius + bondLength/2.0
+    outerSphereFrustumOuterRadius = np.sqrt(0.75 * 4.0  * np.power(outerSphereFrustumOuterZ, 2.0) / numPolymersPerOuterSphere)  
+    outerSphereFrustumInnerRadius = np.sqrt(0.75 * 4.0  * np.power(outerSphereFrustumInnerZ, 2.0) / numPolymersPerOuterSphere)
+    numPolymersPerOuterSphere += 1
+
+outerPolymerDihedralMin = 60
+outerPolymerDihedralMax = 80
+outerPolymerBondAngleMin = 130
+outerPolymerBondAngleMax = 170
+
+sphereOverPackFactorOuter = 2.0
+sphereOverPackFactorInner = 1.5
+numPolymersPerOuterSphere = int(np.floor(sphereOverPackFactorOuter * numPolymersPerOuterSphere)) 
+numPolymersPerInnerSphere = int(np.floor(sphereOverPackFactorInner * numPolymersPerInnerSphere))
+
 print "Outer: numPolymers:", numPolymersPerOuterSphere, "outerZ:", outerSphereFrustumOuterZ, "outerR", outerSphereFrustumOuterRadius, "innerZ:", outerSphereFrustumInnerZ, "innerR", outerSphereFrustumInnerRadius    
 print "Inner: numPolymers:", numPolymersPerInnerSphere, "outerZ:", innerSphereFrustumOuterZ, "outerR", innerSphereFrustumOuterRadius, "innerZ:", innerSphereFrustumInnerZ, "innerR", innerSphereFrustumInnerRadius
-
-atomicMinDist = 1.0
 
 centerPos = np.array([0.0, 0.0, 0.0])
 

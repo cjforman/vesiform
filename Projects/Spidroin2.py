@@ -5,10 +5,7 @@ import Utilities.coordSystems as coords
 import Utilities.fileIO as fIO
 from Builder.BuildingBlockGenerator import BuildingBlockGenerator as BBG
 from Library.peptideBackbonePDB import pdbPeptideBackboneGenerator as PDBGen
-from SpacePack.SpacePack import SpacePackBBG as SPBBG
-from Library.peptideHairpin import peptideHairpinGenerator as PHG
-from Projects.betasheet2 import betasheetGen as BSG
-
+from Projects.spidroinHairpin import spidroinHairpinGenerator as SHGen
 
 class spidroinProteinGenerator(BBG):
     # Each spidroin protein consists of two alpha helical termini and a main 
@@ -35,46 +32,24 @@ class spidroinProteinGenerator(BBG):
         self.CTermDirectorHat = CTerminalDirector/np.linalg.norm(CTerminalDirector)
         self.CTermRot = self.getParam('CTermRot') * np.pi/180                 
                  
-        # Chain parameters
-        self.numResiduesLongChain = self.getParam('numResiduesLongChain')
-        self.numResiduesShortChain = self.getParam('numResiduesShortChain')
-        self.numBetaStrands = self.getParam('numBetaStrands')
-        self.betaStrandLength = self.getParam('betaStrandLength')
-        self.betaStrandSeparation = self.getParam('betaStrandSeparation')
-        self.betaStrandLengthPerResidue = self.getParam('betaStrandLengthPerResidue')
-        
         # Over all parameters used to describe the shape and size of the spidroin packing envelope.
         self.spidroinTerminusSeparation = self.getParam('spidroinTerminusSeparation')
         self.SpidroinFrustumMaxRadius = self.getParam('SpidroinFrustumMaxRadius')
         self.SpidroinFrustumMinRadius = self.getParam('SpidroinFrustumMinRadius')
         self.SpidroinFrustumZ1 = 0.0
         self.SpidroinFrustumZ2 = self.getParam('SpidroinFrustumZ2')
-        self.betaSphereCenterZ = self.getParam('betaSphereCenterZ')
-        self.betaSphereRadius = self.getParam('betaSphereRadius')
         
-        # atomic level information about bond angles and so on 
-        self.CCbondLength = self.getParam('CCbondLength')
-        self.CNbondLength = self.getParam('CNbondLength')        
-        self.phi = self.getParam('phi') * np.pi / 180.0
-        self.psi = self.getParam('psi') * np.pi / 180.0
-        self.omega = self.getParam('omega') * np.pi / 180.0
-        self.angleN = self.getParam('angleN') * np.pi / 180.0
-        self.angleCA = self.getParam('angleCA') * np.pi / 180.0
-        self.angleC = self.getParam('angleC') * np.pi / 180.0  
         self.dumpInterimFiles = self.getParam('dumpInterimFiles')       
         self.verbose = self.getParam('verbose')
          
         # for colouring regions distinct colours in blender:
         self.NTerminalAtomName = self.getParam('NTerminalAtomName') 
         self.CTerminalAtomName = self.getParam('CTerminalAtomName')
-        self.betaStrandAtomName = self.getParam('betaStrandAtomName')
         self.hPinAtomName = self.getParam('hpinAtomName')
         self.spidroinAtomName = self.getParam('spidroinAtomName')
         
         # create instances of all the building block generators that we will need. 
-        self.BetasheetG = BSG(self.paramFilename)
-        self.CoilGen = PHG(self.paramFilename)
-        self.SPBBG = SPBBG(self.paramFilename)
+        self.SpidroinCoilGen = SHGen(self.paramFilename)
         self.CTerminusGen = PDBGen(self.CTerminalFilename)
         self.NTerminusGen = PDBGen(self.NTerminalFilename)
 

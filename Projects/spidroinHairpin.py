@@ -8,6 +8,7 @@ import itertools as it
 import random as rnd
 from Library.constrainedPolymer import ConstrainedPolymerPackBBG as CPBBG
 from Library.SpidroinBackbone import spidroinBackboneGenerator as SBBG
+from numpy import inf
 
 class spidroinHairpinGenerator(CPBBG):
     ''' '''
@@ -23,7 +24,6 @@ class spidroinHairpinGenerator(CPBBG):
         self.SP1NumGUnits =self.getParam('SP1NumGUnits')
         self.SP2NumGUnits =self.getParam('SP2NumGUnits')        
         self.energyScale = self.getParam('energyScale')
-        self.energyEpsilon = self.getParam('energyEpsilon')
         self.maxNumE2Moves = self.getParam('maxNumE2Moves')
         self.E2Temp = self.getParam('E2Temp')
         self.GEpsilon = self.getParam('GEpsilon') 
@@ -89,7 +89,6 @@ class spidroinHairpinGenerator(CPBBG):
        
         # only allowed to do crank shafts or dihedral twists at points named C or N.
         return [ i for i, name in enumerate(names) if name in ['C', 'N'] ]
-        
 
     def generateSpaceCurve(self):
         # Over-rides the generate space curve function of the parent to generate a spidroin coarse grained backbone
@@ -132,7 +131,7 @@ class spidroinHairpinGenerator(CPBBG):
         curPE = initPE
         minPE = initPE
         initOOB = len(self.checkAllPointsInBounds(xyzVals))
-        deltaMinEnergy = 1000 * self.energyEpsilon
+        deltaMinEnergy = inf
         maxStepRange = 1.0
         numMoves = 0
         curMin = 0
@@ -142,7 +141,8 @@ class spidroinHairpinGenerator(CPBBG):
             newXYZ, numValidMoves = self.crankShaftMoves(curXYZVals, 1, maxStepRange)
 
             # reject any move that moves things out of the envelope.
-            if len(self.checkAllPointsInBounds(xyzVals)) < initOOB:
+            numOOB = len(self.checkAllPointsInBounds(xyzVals))
+            if  numOOB > initOOB:
                 numValidMoves = 0
 
             # only compute a new energy if we moved successfully 
@@ -203,7 +203,7 @@ class spidroinHairpinGenerator(CPBBG):
                 acceptString="rejected"
                 if acceptMove==True:
                     acceptString="accepted"
-                print numMoves,"out of", self.maxNumE2Moves, "deltaPE:", deltaPE, "curEnergy:", curPE, "minEnergy:", minPE, "deltaMinE:", deltaMinEnergy, "maxStepRange:", maxStepRange, acceptString 
+                print numMoves,"out of", self.maxNumE2Moves, "deltaPE:", deltaPE, "curEnergy:", curPE, "minEnergy:", minPE, "deltaMinE:", deltaMinEnergy, "maxStepRange:", maxStepRange, "numOOB", numOOB, "initOOB", initOOB, acceptString 
             
             numMoves += 1
 

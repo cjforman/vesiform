@@ -205,12 +205,12 @@ class PDB():
                 atom[8] = newCoords[curCoord][1]
                 atom[9] = newCoords[curCoord][2]
      
-            curCoord += 1
-            
-            #generate the new line
-            newLine = self.pdbLineFromAtom(atom)
+                curCoord += 1
+                
+                #generate the new line
+                newLine = self.pdbLineFromAtom(atom)
            
-        outputlines.append(cp.copy(newLine))
+            outputlines.append(cp.copy(newLine))
     
         fIO.writeTextFile(outputlines, outfile)
     

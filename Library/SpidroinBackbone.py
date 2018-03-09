@@ -22,8 +22,8 @@ class spidroinBackboneGenerator(BBG):
         self.GG1bondLength = self.getParam('GG1bondLength')
         self.GG2bondLength = self.getParam('GG2bondLength')
         self.CNBondLength = self.getParam('CNbondLength')
-        self.CAngle = self.getParam('CAngle')
-        self.NAngle = self.getParam('NAngle')
+        self.angleC = self.getParam('angleC')
+        self.angleN = self.getParam('angleN')
         self.GPPsi = self.getParam('GPPsi')
         self.GPPhi = self.getParam('GPPhi')
         self.PGPsi = self.getParam('PGPsi')
@@ -179,13 +179,13 @@ class spidroinBackboneGenerator(BBG):
 
             # set up the TNB frame to define the alpha and betas for the first part of the G to P Unit
             TNB1 =  coords.constructTNBFrame(DPos, NPosG, CPosG)
-            NPosQ = CPosG + self.CNBondLength *  coords.generateTNBVecXYZ(TNB1, self.CAngle, self.GQPsi)
+            NPosQ = CPosG + self.CNBondLength *  coords.generateTNBVecXYZ(TNB1, self.angleC, self.GQPsi)
 
             # set up the TNB frame to define the alpha and betas for the second part of the G to Q Unit
             TNB2 =  coords.constructTNBFrame(NPosG, CPosG, NPosQ)
 
             # set up FPosPQ and CPosPQ
-            dirHat = coords.generateTNBVecXYZ(TNB2, self.NAngle, self.GQPhi)
+            dirHat = coords.generateTNBVecXYZ(TNB2, self.angleN, self.GQPhi)
             FPosQ = NPosQ + self.QQBondLength/2.0 * dirHat  
             CPosQ = FPosQ + self.QQBondLength/2.0 * dirHat
     
@@ -201,10 +201,10 @@ class spidroinBackboneGenerator(BBG):
         
         # construct the first G Unit from the previous G-PQ unit
         TNB1 = coords.constructTNBFrame(prevGPQ[2], prevGPQ[3], prevGPQ[5])
-        NPosG = prevGPQ[5] + self.CNBondLength * coords.generateTNBVecXYZ(TNB1, self.CAngle, self.PGPsi)
+        NPosG = prevGPQ[5] + self.CNBondLength * coords.generateTNBVecXYZ(TNB1, self.angleC, self.PGPsi)
         
         TNB2 = coords.constructTNBFrame(prevGPQ[3], prevGPQ[5], NPosG)
-        dirHat = coords.generateTNBVecXYZ(TNB2, self.NAngle, self.PGPhi)
+        dirHat = coords.generateTNBVecXYZ(TNB2, self.angleN, self.PGPhi)
         if self.species=='SP1':
             FPosG = NPosG + self.GG1bondLength/2.0 * dirHat
             CPosG = FPosG + self.GG1bondLength/2.0 *  dirHat
@@ -217,18 +217,18 @@ class spidroinBackboneGenerator(BBG):
         
         # now construct the P or Q unit 
         if self.species=='SP1':
-            dirHat = coords.generateTNBVecXYZ(TNB3, self.CAngle, self.GPPsi)
+            dirHat = coords.generateTNBVecXYZ(TNB3, self.angleN, self.GPPsi)
             NPosP =  CPosG + self.CNBondLength * dirHat 
             TNB4 = coords.constructTNBFrame(NPosG, CPosG, NPosP)
-            dirHat = coords.generateTNBVecXYZ(TNB4, self.NAngle, self.GPPhi)
+            dirHat = coords.generateTNBVecXYZ(TNB4, self.angleN, self.GPPhi)
             FPosP = NPosP + self.PPbondLength/2.0 * dirHat
             CPosP = FPosP + self.PPbondLength/2.0 * dirHat
             G_PQUnit = [NPosG, FPosG, CPosG, NPosP, FPosP, CPosP]
         else:
-            dirHat = coords.generateTNBVecXYZ(TNB3, self.CAngle, self.GQPsi)
+            dirHat = coords.generateTNBVecXYZ(TNB3, self.angleC, self.GQPsi)
             NPosQ =  CPosG + self.CNBondLength * dirHat 
             TNB4 = coords.constructTNBFrame(NPosG, CPosG, NPosQ)
-            dirHat = coords.generateTNBVecXYZ(TNB4, self.NAngle, self.GQPhi)
+            dirHat = coords.generateTNBVecXYZ(TNB4, self.angleN, self.GQPhi)
             FPosQ = NPosQ + self.QQbondLength/2.0 * dirHat
             CPosQ = FPosQ + self.QQbondLength/2.0 * dirHat
             G_PQUnit = [NPosG, FPosG, CPosG, NPosQ, FPosQ, CPosQ]
