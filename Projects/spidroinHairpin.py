@@ -605,7 +605,10 @@ class spidroinHairpinGenerator(CPBBG):
     def generateBuildingBlockConnectors(self):
         # N connector first, then C Connector 
         return [ [2, 1, 0], [self.numPoints-3, self.numPoints-2, self.numPoints-1] ]
-        
+
+    def exportEllipsoid(self, filename):
+        fIO.exportEllipsoid(self.blockNames, self.buildingBlockXYZ, self.minDist, self.minDist, fIO.fileRootFromInfile(filename, 'txt'))
+            
 if __name__ == "__main__":
     
     

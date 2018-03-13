@@ -83,6 +83,21 @@ def loadXYZFrames(xyz):
 
     return frames
 
+def saveEllipsoidXYZList(atomNames, ePositions, eSizes, eRs, eRotVecs, filename):
+    zLines = [' ' + str(len(ePositions)) + '\n']
+    zLines.append("Energy of minimum      1=      -12.8344616458 first found at step       95\n")
+    for atomName, ePosition, eSize, eR, eRotVec in zip(atomNames, ePositions, eSizes, eRs, eRotVecs):
+        line = ' ' + atomName 
+        line += ' ' + str(ePosition[0]) + ' ' + str(ePosition[1]) + ' ' + str(ePosition[2])
+        line += ' ellipse ' + str(eSize[0]) + ' ' + str(eSize[1]) + ' ' + str(eSize[2])
+        line += ' ' + str(eR[0][0]) + ' ' + str(eR[1][0]) + ' ' + str(eR[2][0])
+        line += ' ' + str(eR[0][1]) + ' ' + str(eR[1][1]) + ' ' + str(eR[2][1])
+        line += ' ' + str(eR[0][2]) + ' ' + str(eR[1][2]) + ' ' + str(eR[2][2])
+        line += ' atom_vector ' + str(eRotVec[0]) + ' ' + str(eRotVec[1]) + ' ' + str(eRotVec[2]) + '\n'
+        zLines.append(line)
+    writeTextFile(zLines, filename)
+
+
 def saveXYZList(vectors, atomList, filename):
     zLines = [str(len(vectors)) + '\n']
     zLines.append("Test Block\n")
