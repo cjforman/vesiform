@@ -23,9 +23,6 @@ class spidroinHairpinGenerator(CPBBG):
         
         self.SP1NumGUnits =self.getParam('SP1NumGUnits')
         self.SP2NumGUnits =self.getParam('SP2NumGUnits')        
-        self.energyScale = self.getParam('energyScale')
-        self.maxNumE2Moves = self.getParam('maxNumE2Moves')
-        self.E2Temp = self.getParam('E2Temp')
         self.GEpsilon = self.getParam('GEpsilon') 
         self.GRm = self.getParam('GRm')
         self.PQEpsilon = self.getParam('PQEpsilon') 
@@ -111,10 +108,10 @@ class spidroinHairpinGenerator(CPBBG):
         if self.dumpInterimFiles==1:
             fIO.saveXYZList(xyzVals, self.blockNames, 'FinalFolded.xyz')
 
-        xyzVals = self.energyMinimise(xyzVals)
+        # xyzVals = self.energyMinimise(xyzVals)
 
-        if self.dumpInterimFiles==1:
-            fIO.saveXYZList(xyzVals, self.blockNames, 'EnergyMinimised.xyz')
+        # if self.dumpInterimFiles==1:
+        #    fIO.saveXYZList(xyzVals, self.blockNames, 'EnergyMinimised.xyz')
 
         return xyzVals
 
