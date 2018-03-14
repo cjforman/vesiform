@@ -255,6 +255,22 @@ class BuildingBlockGenerator(keyProc):
             except KeyError:
                 pass
 
+        if inBounds:
+            # in this envelope any point outside the spherecylinder is out of bounds
+            try:
+                envelopeParams = self.envelopeSummary['spherocylinder']
+                # the params define two points and a radius
+                # the two points define the line segment swept by a sphere of radius minDist that form a spherocylinder of radius minDist.
+                p1 = np.array([envelopeParams[0], envelopeParams[1], envelopeParams[2]])
+                q1 = np.array([envelopeParams[3], envelopeParams[4], envelopeParams[5]])
+                minDist = envelopeParams[6]
+                inBounds = True
+                # abuse the well writen closestApproachTwoLineSegmentsSquared function which can deal with degenerate points.
+                if cart.closestApproachTwoLineSegmentsSquared(p1, q1, pos, pos) > minDist**2:
+                    inBounds=False
+            except KeyError:
+                pass
+
         
         if inBounds:
             # in this envelope any point outside the sphere is out of bounds

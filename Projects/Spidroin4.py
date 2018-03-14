@@ -143,7 +143,7 @@ class spidroinProteinGenerator(BBG):
         if self.dumpInterimFiles == 1:
             fIO.saveXYZList([pointA, pointB], ['Ca', 'O'], "labEndPoints.xyz")
 
-        print "Generating Coils"
+        print "Generating Coil"
         # generate a spidroin coil between each terminus.
         minDist = 1.0
         numCrankMoves = 0
@@ -157,10 +157,24 @@ class spidroinProteinGenerator(BBG):
             fIO.saveXYZ(self.spidroinHairpin.blockXYZVals, self.spidroinHairpinAtomName, "hPin.xyz")
 
         print "hairpin done"
+
+        # populate each section of the coarse grained spidroin hairpin with a peptide hairpin between the start and end points. 
+        
+        # create the start and end points
+        templateChain = [ ]
+        
+        print "populate coarse grained hairpin with peptide chains."
+        self.spidroinHairpinPeptide = self.chainOfChains.generateBuildingBlock(templateChain)
+
+        if self.dumpInterimFiles==1:
+            fIO.saveXYZ(self.spidroinHairpinPeptide.blockXYZVals, self.spidroinHairpinAtomName, "hPin.xyz")
+
+        print "hairpin done"
+
             
         # assemble the components into a single final block of xyz values
         spidroinXYZ = self.NTerminusBackbone.blockXYZVals
-        spidroinXYZ = np.concatenate( (spidroinXYZ, self.spidroinHairpin.blockXYZVals), 0 )
+        spidroinXYZ = np.concatenate( (spidroinXYZ, self.spidroinHairpinPeptide.blockXYZVals), 0 )
         spidroinXYZ = np.concatenate( (spidroinXYZ , self.CTerminusBackbone.blockXYZVals), 0 )
 
         if self.dumpInterimFiles==1:
@@ -208,7 +222,7 @@ class spidroinProteinGenerator(BBG):
     def generateBuildingBlockNames(self):
         # name the components
         spidroinNames = self.NTerminusBackbone.blockAtomNames
-        spidroinNames += self.spidroinHairpin.blockAtomNames
+        spidroinNames += self.spidroinHairpinPeptide.blockAtomNames
         spidroinNames += self.CTerminusBackbone.blockAtomNames
         
         return spidroinNames

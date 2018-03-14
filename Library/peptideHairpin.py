@@ -30,7 +30,8 @@ class peptideHairpinGenerator(CPBBG):
     then computed based on the distance between them. Conformations with smaller 
     amounts of energy are found by picking C-CA or N-CA bonds at random and 
     performing dihedral moves of the entire free end of chain from the selected 
-    bond onwards. 
+    bond onwards.  (PS at some time point later this gradient thing was abandoned because it took too long. 
+    The code was greyed out in the PE function, but you can put it back in if you want).
     
     Each time a move is made the new energy of the two springs is calculated for the 
     new position. If the move results in lower total spring energy than the lowest energy 
