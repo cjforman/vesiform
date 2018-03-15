@@ -11,12 +11,14 @@ class chainOfChainsGenerator(BBG):
     # specified in the diameter array.  
     
     def __init__(self, filename):
+        self.filename = filename
         BBG.__init__(self, filename)
+
 
     def initialiseParameters(self):
         self.dumpInterimFiles = self.getParam('dumpInterimFiles')
-        self.PHG = PHG(filename)
-        self.PBG = PBG(filename)
+        self.PHG = PHG(self.filename)
+        self.PBG = PBG(self.filename)
         
     def generateBuildingBlock(self, numResidues, pointsA, pointsB, radii, minDist, visualiseEnvelope = (0,20,'envelope.xyz')):
     

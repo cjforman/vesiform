@@ -5,6 +5,7 @@ import Utilities.fileIO as fIO
 from Builder.BuildingBlockGenerator import BuildingBlockGenerator as BBG
 from Library.peptideBackbonePDB import pdbPeptideBackboneGenerator as PDBGen
 from Projects.spidroinHairpin import spidroinHairpinGenerator as SHGen
+from Projects.chainOfChains import chainOfChainsGenerator as CCGen
 
 class spidroinProteinGenerator(BBG):
     # Each spidroin protein consists of two alpha helical termini and a main 
@@ -46,6 +47,14 @@ class spidroinProteinGenerator(BBG):
         self.angleC = self.getParam('angleC')
         self.dumpInterimFiles = self.getParam('dumpInterimFiles')       
         self.verbose = self.getParam('verbose')
+        self.SP1NumGUnits = self.getParam('SP1NumGUnits')
+        self.SP2NumGUnits = self.getParam('SP2NumGUnits') 
+        self.envRadiusFactor = self.getParam('envRadiusFactor')
+        self.SP1LenGunitRes = self.getParam('SP1LenGunitRes')
+        self.SP1LenPQunitRes = self.getParam('SP1LenPQunitRes')
+        self.SP2LenGunitRes = self.getParam('SP2LenGunitRes')
+        self.SP2LenPQunitRes = self.getParam('SP2LenPQunitRes')
+         
          
         # for colouring regions distinct colours in blender:
         self.NTerminalAtomName = self.getParam('NTerminalAtomName') 
@@ -57,6 +66,7 @@ class spidroinProteinGenerator(BBG):
         self.SpidroinCoilGen = SHGen(self.paramFilename)
         self.CTerminusGen = PDBGen(self.CTerminalFilename)
         self.NTerminusGen = PDBGen(self.NTerminalFilename)
+        self.CCGen = CCGen(self.paramFilename)
         
         if self.noLoadErrors == False:            
             print "Critical Parameters are undefined for Spidroin Object"
@@ -154,27 +164,42 @@ class spidroinProteinGenerator(BBG):
         self.spidroinHairpin = self.SpidroinCoilGen.generateBuildingBlock(self.species, pointA, pointB, minDist, numCrankMoves, envelopeList=envelopeList, visualiseEnvelope=(1000000, visualiseEnvelopeEnvelope, 'envelope_' + str(self.species) + '.xyz'))
 
         if self.dumpInterimFiles==1:
-            fIO.saveXYZ(self.spidroinHairpin.blockXYZVals, self.spidroinHairpinAtomName, "hPin.xyz")
+            fIO.saveXYZ(self.spidroinHairpin.blockXYZVals, self.spidroinHairpinAtomName, "hPinCG.xyz")
 
-        print "hairpin done"
+        print "Coarse grained hairpin done"
 
         # populate each section of the coarse grained spidroin hairpin with a peptide hairpin between the start and end points. 
+        numGUnits = self.SP2NumGUnits
+        lenGUnit = self.SP2LenGUnitRes
+        lenPQUnit = self.SP2LenPQUnitRes
+        if self.species=='SP1':
+            numGUnits = self.SP1NumGUnits 
+            lenGUnit = self.SP1LenGunitRes
+            lenPQUnit = self.SP1LenPQunitRes
+            
+        radii = [minDist * self.envRadiusFactor] * numGUnits * 2
+        residues = [lenPQUnit, lenGUnit] * numGUnits
+        if self.species=='SP2':
+            residues = residues + [lenPQUnit]
+            radii = radii + [minDist * self.envRadiusFactor]
         
-        # create the start and end points
-        templateChain = [ ]
+        pointsA = [ xyzVal for xyzVal,name in zip(self.spidroinHairpin.blockXYZVals, self.spidroinHairpin.blockAtomNames) if name == 'N' ]
+        pointsB = [ xyzVal for xyzVal,name in zip(self.spidroinHairpin.blockXYZVals, self.spidroinHairpin.blockAtomNames) if name == 'C' ]
+            
+        if self.dumpInterFiles ==1:
+            fIO.saveXYZList(pointsA + pointsB, ['Ca'] * len(pointsA) + ['O'] * len(pointsB), "labPoints.xyz")
+            
+        self.COfChainsBB = CCGen.generateBuildingBlock(residues, pointsA, pointsB, radii, minDist, visualiseEnvelope=(0, 50, 'envelope.xyz'))
         
-        print "populate coarse grained hairpin with peptide chains."
-        self.spidroinHairpinPeptide = self.chainOfChains.generateBuildingBlock(templateChain)
-
         if self.dumpInterimFiles==1:
-            fIO.saveXYZ(self.spidroinHairpinPeptide.blockXYZVals, self.spidroinHairpinAtomName, "hPin.xyz")
+            fIO.saveXYZ(self.COfChainsBB.blockXYZVals, self.spidroinHairpinAtomName, "hPin.xyz")
 
-        print "hairpin done"
+        print "detailed hairpin done"
 
             
         # assemble the components into a single final block of xyz values
         spidroinXYZ = self.NTerminusBackbone.blockXYZVals
-        spidroinXYZ = np.concatenate( (spidroinXYZ, self.spidroinHairpinPeptide.blockXYZVals), 0 )
+        spidroinXYZ = np.concatenate( (spidroinXYZ, self.COfChainsBB.blockXYZVals), 0 )
         spidroinXYZ = np.concatenate( (spidroinXYZ , self.CTerminusBackbone.blockXYZVals), 0 )
 
         if self.dumpInterimFiles==1:
@@ -222,7 +247,7 @@ class spidroinProteinGenerator(BBG):
     def generateBuildingBlockNames(self):
         # name the components
         spidroinNames = self.NTerminusBackbone.blockAtomNames
-        spidroinNames += self.spidroinHairpinPeptide.blockAtomNames
+        spidroinNames += self.COfChainsBB.blockAtomNames
         spidroinNames += self.CTerminusBackbone.blockAtomNames
         
         return spidroinNames

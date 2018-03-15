@@ -4,11 +4,10 @@ import random as rnd
 import Utilities.fileIO as fIO
 from Builder.BuildingBlockGenerator import BuildingBlockGenerator as BBG
 from Projects.Spidroin import spidroinProteinGenerator as SPG
-from Library.Ellipsoid import EllipsoidPackNBB as EPNBB
+from Library.SurfacePackEllipsoid import SurfacePackEllipsoidBBG as SPEBBG
 
 class spidroinAggregateGenerator(BBG):
-    # Takes a spidroin protein generator and packs N of them into either a sphere
-    # or an ellipsoid.
+    # Takes a spidroin species 1 and 2 file and creates intermediate bundles.
 
     def __init__(self, filename):
         BBG.__init__(self, filename)
@@ -16,57 +15,39 @@ class spidroinAggregateGenerator(BBG):
     def initialiseParameters(self):
         BBG.initialiseParameters(self) 
         
-        self.SPG = SPG(self.paramFilename)
-        self.EPNBB = EPNBB(self.paramFilename)
+        self.spidroinSpecies1 = self.getParam('spidroinSpecies1.xyz')
+        self.spidroinSpecies2 = self.getParam('spidroinSpecies2.xyz')
+        
+        self.ellipsoidPack = SPEBBG(self.paramFilename)
         
         if self.noLoadErrors == False:            
             print "Critical Parameters are undefined for Spidroin Object"
             sys.exit()        
 
-    def generateBuildingBlock(self, numSpidroins, centrePos, direction, rotation, rx, ry, rz, theta1, theta2, phi1, phi2, alignDirectors=False, showDirector=False, nameByBuildingBlockType=False):
-        self.numSpidroins = numSpidroins
-        self.spidroinAggCentrePos = centrePos
-        self.spidroinAggDirector = direction
-        self.spidroinAggRotation = rotation
-        self.spidroinAggRx = rx
-        self.spidroinAggRy = ry
-        self.spidroinAggRz = rz
-        self.spidroinAggTheta1 = theta1
-        self.spidroinAggTheta2 = theta2
-        self.spidroinAggPhi1 = phi1
-        self.spidroinAggPhi2 = phi2
-        self.nameByBuildingBlockType = nameByBuildingBlockType 
+    def generateBuildingBlock(self, numSpidroinSpecies1, numSpidroinSpecies2, numClustersInAggregate):
+        
+        self.numSpidroinsSpecies1 = numSpidroinSpecies1
+        self.numSpidroinsSpecies2 = numSpidroinSpecies2
+        self.numPointsInCluster = numSpidroinSpecies1 + numSpidroinSpecies2
+        self.numClustersInAggregate = numClustersInAggregate
            
-        return BBG.generateBuildingBlock(self, numSpidroins, centrePos, direction, rotation, alignDirectors=alignDirectors, showDirector=showDirector)
+        return BBG.generateBuildingBlock(self, self.numPointsInCluster)
     
     def generateBuildingBlockXYZ(self):
-       
-        # get the size of each individual spidroin
-        SpidAggMinDist = 2.0 * max([self.SPG.betaSheetRx,
-                                    self.SPG.betaSheetRy,
-                                    self.SPG.betaSheetRz])
+
         print "Generating Positions"
-        # generate the positions as distributed over the given spheroid
-        spidroinPositionBB = self.EPNBB.generateBuildingBlock(self.numSpidroins, 
-                                                        self.spidroinAggCentrePos,
-                                                        self.spidroinAggDirector,
-                                                        self.spidroinAggRotation,
-                                                        self.spidroinAggRx,
-                                                        self.spidroinAggRy,
-                                                        self.spidroinAggRz,
-                                                        self.spidroinAggTheta1,
-                                                        self.spidroinAggTheta2,
-                                                        self.spidroinAggPhi1,
-                                                        self.spidroinAggPhi2,
-                                                        SpidAggMinDist,
-                                                        alignDirectors=False, 
-                                                        showDirector=False)
+        spidroinPositionBB = SPEBBG.generateBuildingBlock(self, 
+                                                          self.numPointsInCluster, 
+                                                          self.clusterRX, 
+                                                          self.clusterRY, 
+                                                          self.clusterRZ, 
+                                                          -90, 90, -180, 180, 
+                                                          self.SpidroinRadius)
         
-        # compute the spidroin positions
         spidroinPositions = spidroinPositionBB.xyzVals
         
         # compute individual spidroin generators
-        spidroinGenVecs = [ spidPos -  self.spidroinAggCentrePos for spidPos in spidroinPositions]
+        spidroinGenVecs = [ spidPos for spidPos in spidroinPositions]
         spidroinGenVecsHat = [ spidGen/np.linalg.norm(spidGen) for spidGen in spidroinGenVecs ]
         
         # randomly orient the spidroins in the surface about their generators
