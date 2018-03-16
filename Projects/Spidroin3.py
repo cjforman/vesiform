@@ -36,6 +36,9 @@ class spidroinProteinGenerator(BBG):
         self.SpidroinFrustumMinRadius = self.getParam('SpidroinFrustumMinRadius')
         self.SpidroinFrustumZ1 = 0.0
         self.SpidroinFrustumZ2 = self.getParam('SpidroinFrustumZ2')
+        self.ellipseRX = self.getParam('ellipseRX')
+        self.ellipseRY = self.getParam('ellipseRY')
+        self.ellipseRZ = self.getParam('ellipseRZ')
         self.CNbondLength = self.getParam('CNbondLength')
         self.CCbondLength = self.getParam('CCbondLength')
         self.omega = self.getParam('omega')
@@ -62,13 +65,14 @@ class spidroinProteinGenerator(BBG):
             print "Critical Parameters are undefined for Spidroin Object"
             sys.exit()        
 
-    def generateBuildingBlock(self, species, minDist, showBlockDirector=False):
+    def generateBuildingBlock(self, species, minDist, showBlockDirector=False, sheared=False, envelopeList=['None']):
         self.species = species
+        self.sheared = sheared
         dummyNumPoints = 0
         self.minDist = minDist
         self.spidroinDirector = np.array([0.0, 0.0, 1.0])
         self.spidroinRefPoint = np.array([0.0, 0.0, 0.0])
-        return BBG.generateBuildingBlock(self, dummyNumPoints, minDist, showBlockDirector=showBlockDirector)
+        return BBG.generateBuildingBlock(self, dummyNumPoints, minDist, showBlockDirector=showBlockDirector, envelopeList=envelopeList)
     
     def generateBuildingBlockXYZ(self):
         # The spidroin model consists of two alpha helical termini proteins which are taken from PDB files
@@ -77,7 +81,10 @@ class spidroinProteinGenerator(BBG):
         # The centre of mass of the two termini are placed at +/- spidroinTerminusSeparation/2.0 on the x axis.
         
         print "CTerminus"
+        #if self.sheared==False:
         refPosCTerm = np.array([-self.spidroinTerminusSeparation/2.0, 0.0, -2.7]) # this last 2.7 is a total hack to get pointB in the envelope
+        #else:
+        #    refPosCTerm = np.array([- 0.95 * self.ellipseRX, 0.0, -2.7]) # this last 2.7 is a total hack to get pointB in the envelope
         self.CTerminusAll = self.CTerminusGen.generateBuildingBlock(backboneOnly = False, director = self.CTermDirectorHat, showBlockDirector=False)
         self.CTerminusBackbone = self.CTerminusGen.generateBuildingBlock(backboneOnly = True, director = self.CTermDirectorHat, showBlockDirector=False)
         self.CTerminusAll.transformBBToLabFrame(self.spidroinDirector, refPosCTerm, self.CTermRot)
@@ -88,7 +95,10 @@ class spidroinProteinGenerator(BBG):
             fIO.saveXYZ(self.CTerminusBackbone.blockXYZVals, self.CTerminalAtomName, "CTerminal.xyz")
         
         print "NTerminus"
-        refPosNTerm  = np.array([self.spidroinTerminusSeparation/2.0, 0.0, 0.0])
+        #if self.sheared==False:
+        refPosNTerm = np.array([self.spidroinTerminusSeparation/2.0, 0.0, -2.7]) # this last 2.7 is a total hack to get pointB in the envelope
+        #else:
+        #    refPosNTerm = np.array([0.8 * self.ellipseRX, 0.0, -2.7]) # this last 2.7 is a total hack to get pointB in the envelope
         self.NTerminusAll = self.NTerminusGen.generateBuildingBlock(backboneOnly = False, director = self.NTermDirectorHat, showBlockDirector=False)
         self.NTerminusBackbone = self.NTerminusGen.generateBuildingBlock(backboneOnly = True, director = self.NTermDirectorHat, showBlockDirector=False)
         self.NTerminusAll.transformBBToLabFrame(self.spidroinDirector, refPosNTerm, self.NTermRot)
@@ -147,11 +157,14 @@ class spidroinProteinGenerator(BBG):
         # generate a spidroin coil between each terminus.
         minDist = 1.0
         numCrankMoves = 0
-        envelopeList = ['innersphere ' + str(0.9 * self.spidroinTerminusSeparation), 'frustum ' + str(self.SpidroinFrustumZ1 + 2.0) + ' ' + str(self.SpidroinFrustumMaxRadius) + ' ' + str(self.SpidroinFrustumZ2) + ' ' + str(self.SpidroinFrustumMinRadius)]
-        visualiseEnvelopeEnvelope = 400.0 
+        if self.sheared==False:
+            envelopeList = ['innersphere ' + str(0.9 * self.spidroinTerminusSeparation), 'frustum ' + str(self.SpidroinFrustumZ1 + 2.0) + ' ' + str(self.SpidroinFrustumMaxRadius) + ' ' + str(self.SpidroinFrustumZ2) + ' ' + str(self.SpidroinFrustumMinRadius)]
+        else:
+            envelopeList = ['outerellipse ' + str(self.ellipseRX) + ' ' + str(self.ellipseRY) + ' ' + str(self.ellipseRZ) + ' 0.0', 'halfspace 3.0']
+        visualiseEnvelopeEnvelope = 250.0 
         
         # build building block and dump to file
-        self.spidroinHairpin = self.SpidroinCoilGen.generateBuildingBlock(self.species, pointA, pointB, minDist, numCrankMoves, envelopeList=envelopeList, visualiseEnvelope=(1000000, visualiseEnvelopeEnvelope, 'envelope_' + str(self.species) + '.xyz'))
+        self.spidroinHairpin = self.SpidroinCoilGen.generateBuildingBlock(self.species, pointA, pointB, minDist, numCrankMoves, envelopeList=envelopeList, visualiseEnvelope=(80000, visualiseEnvelopeEnvelope, 'envelope_' + str(self.species) + '.xyz'))
 
         if self.dumpInterimFiles==1:
             fIO.saveXYZ(self.spidroinHairpin.blockXYZVals, self.spidroinHairpinAtomName, "hPin.xyz")
