@@ -14,7 +14,7 @@ minDist = 1.0
 
 SpidroinSpecies2BB = spidroinProteinGenerator.generateBuildingBlock( species2,
                                                                      minDist,
-                                                                     showBlockDirector=False)  
+                                                                     showBlockDirector=False, sheared=True)  
 SpidroinSpecies2BB.exportBBK('species2Spidroin.xyz')
 
 print("Spidroin Species 2 Done.")

@@ -3,6 +3,7 @@ import numpy as np
 from Projects.Spidroin3 import spidroinProteinGenerator as SPG
 
 filename = sys.argv[1]
+
 # individual spidroins
 spidroinProteinGenerator = SPG(filename)
 species1 = 'SP1'
@@ -13,7 +14,7 @@ minDist = 1.0
 
 SpidroinSpecies1BB = spidroinProteinGenerator.generateBuildingBlock( species1,
                                                                      minDist,
-                                                                     showBlockDirector=False)  
+                                                                     showBlockDirector=False, sheared=True)  
 SpidroinSpecies1BB.exportBBK('species1Spidroin.xyz')
 
 print("Spidroin Species 1 Done.")

@@ -506,6 +506,41 @@ class ConstrainedPolymerPackBBG(BBG):
         # if valid Crank is false then the original list is returned intact
         # if valid crank is true then the new vals are inserted into the new list
         return workingXYZVals, validCrank
+
+    def checkPointInBounds(self, pos, ignorePTA=False):
+        inBounds = True
+
+        # in this envelope any point outside the ellipse is out of bounds
+        # The ellipse has three axes Rx, Ry and Rz which are specified
+        # in the envelope list.  The ellipse is oriented such that its
+        # x-axis is aligned with the blockDirector and rotated about that 
+        # axis by an amount specified in the envelope list
+        # 
+        try:
+            envelopeParams = self.envelopeSummary['outerellipse']
+            # ellipse centered at refPoint with input radius rx, ry and rz
+            # and oriented so it's x-axis is along the pointA to pointB line.
+            
+            # first transform the point into the ellipse coordinates
+            blockPos = coords.transformFromLabFrameToBlockFrame(self.blockDirectorHat, self.blockRefPoint, envelopeParams[3], np.array([1.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0]), [pos]) 
+            
+            # compute spherical polar coords of pos relative to the ellipsoid body axes and centre.
+            polarPos = coords.XYZ2SphericalPolar(blockPos[0])
+            # compute distance from centre of ellipsoid to ellipsoids surface at the bearing as the test pos.
+            r_e = coords.ellipsoidalPolarUVW(polarPos[1], polarPos[2], envelopeParams[0], envelopeParams[1], envelopeParams[2])[0] # take first parameter of returned information which is distance to ellipsoid
+            if polarPos[0] > r_e:
+                if self.verbose==1:
+                    print "outerEllipse Violation"
+                inBounds=False
+        except KeyError:
+            pass
+
+        # check the underlying checkPointInBounds for other checks that may be included
+        if inBounds:
+            inBounds = BBG.checkPointInBounds(self, pos, ignorePTA)
+        
+        return inBounds
+        
         
     def getParams(self):
         return self.params 

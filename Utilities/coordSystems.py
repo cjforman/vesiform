@@ -69,7 +69,6 @@ def azToRhoCyl(az, r_x, r_y):
     p = a**2 + b**2
     return np.power(1/p, 0.5)
     
-
 def ellipsoidalPolarUVW(theta, phi, r_x, r_y, r_z):
     # returns the radial vector along theta and phi in XYZ and also returns the distance along that 
     # vector from the origin to the surface of an ellipsoid with semi major axes, r_x. r_y, and r_z
