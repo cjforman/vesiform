@@ -2,7 +2,7 @@ from Projects.chainOfChains import chainOfChainsGenerator as CCGen
 import Utilities.fileIO as fIO 
 
 filename = "chainOfChains.txt"
-nameList, xyzVals = fIO.loadXYZ("species1SpidroinHPin.xyz")
+nameList, xyzVals = fIO.loadXYZ("species1HPin.xyz")
     
 # create the backbone generator object using static file parameters
 chainOfChainsGen = CCGen(filename)
