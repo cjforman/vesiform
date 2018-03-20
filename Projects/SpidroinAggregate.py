@@ -5,7 +5,7 @@ import Utilities.fileIO as fIO
 import Utilities.coordSystems as coords
 from Builder.BuildingBlockGenerator import BuildingBlockGenerator as BBG
 from Library.SurfacePackEllipsoid import SurfacePackEllipsoidBBG as SPEBBG
-from Library.peptideBackbonePDB import pdbPeptideBackboneGenerator as PDBGen
+from Library.VolumePackEllipsoid import VolumePackEllipsoidBBG as VPEBBG
 
 
 class spidroinAggregateGenerator(BBG):
@@ -32,6 +32,7 @@ class spidroinAggregateGenerator(BBG):
         self.minDist = self.getParam('minDist')
     
         self.SPEBBG = SPEBBG(self.paramFilename)
+        self.VPEBBG = VPEBBG(self.paramFilename)
         
         if self.noLoadErrors == False:            
             print "Critical Parameters are undefined for Spidroin Object"
@@ -55,7 +56,7 @@ class spidroinAggregateGenerator(BBG):
                                                                self.clusterRX, 
                                                                self.clusterRY, 
                                                                self.clusterRZ, 
-                                                               -90, 90, -180, 180, 
+                                                               -90.0, 90.0, -180.0, 180.0, 
                                                                self.SpidroinRadius)
         
         # compute the positions and orientations of each individual spidroin within it's cluster
@@ -66,16 +67,18 @@ class spidroinAggregateGenerator(BBG):
 
 
         print "Generating cluster positions within the larger aggregate"
-        clusterPositionBB = self.SPEBBG.generateBuildingBlock(self.numClustersInAggregate, 
+        clusterPositionBB = self.VPEBBG.generateBuildingBlock(self.numClustersInAggregate, 
                                                               self.aggregateRX, 
                                                               self.aggregateRY, 
-                                                              self.aggregateRZ, 
-                                                              -90, 90, -135, 135, 
-                                                              max(self.clusterRX, self.clusterRY, self.clusterRZ) + self.species2AltitudeBoost + self.TerminalExtension)
+                                                              self.aggregateRZ,
+                                                              -90.0, 90.0, -180.0, 180.0, 
+                                                              (max(self.clusterRX, self.clusterRY, self.clusterRZ) + self.species2AltitudeBoost + self.TerminalExtension))
         clusterPositions = clusterPositionBB.blockXYZVals
         clusterDirectors = [ clustPos for clustPos in clusterPositions]
         clusterDirectorsHat = [ clustDir/np.linalg.norm(clustDir) for clustDir in clusterDirectors ]
         clusterRots = [ rnd.uniform(0, 360) for _ in range(0, self.numClustersInAggregate)]
+
+        fIO.saveXYZ(clusterPositions, 'Ne', 'aggClusterPoints.xyz')
 
         print "Producing Cluster"
         # sety up output arrays
@@ -143,9 +146,9 @@ if __name__=="__main__":
     # generating spherical spidroin aggregate
     spidroinAggregateGenerator = spidroinAggregateGenerator('unsheared.txt')
     
-    numSpidsSpecies1 = 15
-    numSpidsSpecies2 = 10
-    numClustersInAggregate = 100
+    numSpidsSpecies1 = 8
+    numSpidsSpecies2 = 5
+    numClustersInAggregate = 30
     
     SpidroinCluster = spidroinAggregateGenerator.generateBuildingBlock(numSpidsSpecies1, numSpidsSpecies2, numClustersInAggregate)
     print("Spidroin Cluster Done.")
