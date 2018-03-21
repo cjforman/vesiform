@@ -26,10 +26,14 @@ class VolumePackEllipsoidBBG(NBB):
             print "Critical Parameters are undefined for NPackBBG object"
             sys.exit()        
     
-    def generateBuildingBlock(self, numPoints, xRadius, yRadius, zRadius, minDist, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200), showBlockDirector=False):
+    def generateBuildingBlock(self, numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, minDist, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200,'envelope.xyz'), showBlockDirector=False):
         self.xRadius = xRadius
         self.yRadius = yRadius
         self.zRadius = zRadius
+        self.theta1 = theta1 * np.pi/180.0
+        self.theta2 = theta2 * np.pi/180.0
+        self.phi1 = phi1 * np.pi/180.0
+        self.phi2 = phi2 * np.pi/180.0
         return NBB.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, pointsToAvoid=pointsToAvoid, visualiseEnvelope=visualiseEnvelope, showBlockDirector=showBlockDirector)
     
     def generateBuildingBlockDirector(self):
@@ -45,7 +49,7 @@ class VolumePackEllipsoidBBG(NBB):
         return True
         
     def pickRandomPointInDefinedSpace(self):
-        return coords.pickRandomPointInEllipsoid(self.xRadius, self.yRadius, self.zRadius)
+        return coords.pickRandomPointInEllipsoidRange(self.xRadius, self.yRadius, self.zRadius, self.theta1, self.theta2, self.phi1, self.phi2)
        
     def getParams(self):
         return self.params 
