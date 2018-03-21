@@ -20,7 +20,7 @@ class chainOfChainsGenerator(BBG):
         self.PHG = PHG(self.filename)
         self.PBG = PBG(self.filename)
         
-    def generateBuildingBlock(self, numResidues, pointsA, pointsB, radii, minDist, visualiseEnvelope = (0,20,'envelope.xyz')):
+    def generateBuildingBlock(self, numResidues, pointsA, pointsB, radii, nameTypes, minDist, visualiseEnvelope = (0,20,'envelope.xyz')):
     
         self.numSegments = len(numResidues)
         if len(pointsA) != self.numSegments:
@@ -29,11 +29,14 @@ class chainOfChainsGenerator(BBG):
             print "Num supplied points does not match num Segments in chainOfChains"
         if len(radii) != self.numSegments:
             print "Num supplied diameters does not match num Segments in chainOfChains"
+        if len(nameTypes) != self.numSegments:
+            print "Num supplied nameTypes does not match num Segments in chainOfChains"
 
         self.pointsA = pointsA
         self.pointsB = pointsB
         self.numResidues = numResidues
         self.radii = radii
+        self.nameTypes = nameTypes
         self.numPoints = numResidues * self.numSegments * 3
         self.minDist = minDist
         self.envSize = visualiseEnvelope[0]
@@ -50,7 +53,7 @@ class chainOfChainsGenerator(BBG):
         xyzVals = []
         namesTemp = []
         chainNum = 0
-        for numResidues, pointA, pointB, radius in zip(self.numResidues, self.pointsA, self.pointsB, self.radii):
+        for numResidues, pointA, pointB, radius, nameType in zip(self.numResidues, self.pointsA, self.pointsB, self.radii, self.nameTypes):
             
             seedResidue.placeAtom(2, pointA)
             seedResidue.setBlockRefPoint(pointA)
@@ -75,13 +78,18 @@ class chainOfChainsGenerator(BBG):
                                                   0,
                                                   visualiseEnvelope=(self.envSize, self.envRange, 'envelope'+str(chainNum)+'.xyz'),
                                                   envelopeList=envelopeList) 
+
+            # for type 2 segments give the N C atoms Ne and B respectively. Allows for different colouration of the segments.             
+            namesList = PHP.blockAtomNames
+            if nameType == 'PQ':
+                namesList = [ 'Ne' if name=='N' else 'B' for name in PHP.blockAtomNames]
             
             if len(xyzVals)==0:
                 xyzVals = PHP.blockXYZVals
-                namesTemp= PHP.blockAtomNames
+                namesTemp= namesList
             else:
                 xyzVals = np.concatenate((xyzVals, PHP.blockXYZVals), 0)
-                namesTemp = np.concatenate((namesTemp, PHP.blockAtomNames), 0)
+                namesTemp = np.concatenate((namesTemp, namesList), 0)
             self.namesTemp = namesTemp
             chainNum += 1
 

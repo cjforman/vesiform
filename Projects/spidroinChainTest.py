@@ -11,12 +11,14 @@ chainOfChainsGen = CCGen(filename)
 minDist = 1.0
 residues = [19, 15] * 131 + [19]
 radii = [minDist * 6] * 263
-pointsA = [ xyzVal for xyzVal,name in zip(xyzVals, nameList) if name == 'N' ]
-pointsB = [ xyzVal for xyzVal,name in zip(xyzVals, nameList) if name == 'C' ]
+nameType = ['PQ', 'G'] * 131 + ['PQ']
+
+pointsA = [ xyzVal for xyzVal, name in zip(xyzVals, nameList) if name == 'N' ]
+pointsB = [ xyzVal for xyzVal, name in zip(xyzVals, nameList) if name == 'C' ]
     
 fIO.saveXYZList(pointsA + pointsB, ['Ca'] * len(pointsA) + ['O'] * len(pointsB), "labPoints.xyz")
     
-cOfChainsBB = chainOfChainsGen.generateBuildingBlock(residues, pointsA, pointsB, radii, minDist, visualiseEnvelope=(0, 50, 'envelope.xyz'))
+cOfChainsBB = chainOfChainsGen.generateBuildingBlock(residues, pointsA, pointsB, radii, nameType, minDist, visualiseEnvelope=(0, 50, 'envelope.xyz'))
 cOfChainsBB.exportBBK("species2Chain")
     
 print "chainOfChains done"
