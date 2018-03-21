@@ -27,7 +27,7 @@ class VolumePackEllipsoidSCParticlesBBG(NBB):
             print "Critical Parameters are undefined for NPackBBG object"
             sys.exit()        
     
-    def generateBuildingBlock(self, numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, minDist, pLength, numSpheresPerParticle, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200,'envelope.xyz'), showBlockDirector=False):
+    def generateBuildingBlock(self, numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, thetaDir1, thetaDir2, phiDir1, phiDir2, minDist, pLength, numSpheresPerParticle, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200,'envelope.xyz'), showBlockDirector=False):
         self.xRadius = xRadius
         self.yRadius = yRadius
         self.zRadius = zRadius
@@ -35,6 +35,10 @@ class VolumePackEllipsoidSCParticlesBBG(NBB):
         self.theta2 = theta2 * np.pi/180.0
         self.phi1 = phi1 * np.pi/180.0
         self.phi2 = phi2 * np.pi/180.0
+        self.thetaDir1 = thetaDir1 * np.pi/180.0
+        self.thetaDir2 = thetaDir2 * np.pi/180.0
+        self.phiDir1 = phiDir1 * np.pi/180.0
+        self.phiDir2 = phiDir2 * np.pi/180.0
         self.minDist = minDist
         self.pLength = pLength
         self.numSpheresPerParticle = numSpheresPerParticle
@@ -56,7 +60,7 @@ class VolumePackEllipsoidSCParticlesBBG(NBB):
         return True
         
     def pickRandomPointInDefinedSpace(self):
-        theta, phi = coords.pickRandomPointOnUnitSphere()
+        theta, phi = coords.pickRandomPointOnUnitSphereInAngRange(self.thetaDir1, self.thetaDir2, self.phiDir1, self.phiDir2)
         dirn = coords.sphericalPolar2XYZ(np.array([1.0, theta, phi]))
         return (coords.pickRandomPointInEllipsoidRange(self.xRadius, self.yRadius, self.zRadius, self.theta1, self.theta2, self.phi1, self.phi2), dirn) 
        
@@ -100,17 +104,21 @@ if __name__ == '__main__':
     # create the NPack object.
     EllipsoidPackSCBBG = VolumePackEllipsoidSCParticlesBBG(filename)
 
-    numPoints = 140
+    numPoints = 100
     centrePos = np.array([0, 0, 0])
     director= np.array([0, 0, 1])
     rotation = 0 
-    xRadius = 10
-    yRadius = 10
-    zRadius = 10
+    xRadius = 5
+    yRadius = 5
+    zRadius = 5
     theta1 = -90.0
     theta2 = 90.0
     phi1 = -180.0
     phi2 = 180.0
+    thetad1 = -90.0
+    thetad2 = 90.0
+    phid1 = -180.0
+    phid2 = 180.0
     minDist = 2.0
     pLength = 2.0
     numSpheresPerParticle = 30
@@ -118,7 +126,7 @@ if __name__ == '__main__':
     envelopeList = ['None']
        
     # generate the building block
-    EllipsoidPackSCBB = EllipsoidPackSCBBG.generateBuildingBlock(numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, minDist, pLength, numSpheresPerParticle, envelopeList = envelopeList)
+    EllipsoidPackSCBB = EllipsoidPackSCBBG.generateBuildingBlock(numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, thetad1, thetad2, phid1, phid2, minDist, pLength, numSpheresPerParticle, envelopeList = envelopeList)
     EllipsoidPackSCBB.transformBBToLabFrame(director, centrePos, rotation)
     EllipsoidPackSCBB.exportBBK(fIO.fileRootFromInfile(filename,'txt'))
     
