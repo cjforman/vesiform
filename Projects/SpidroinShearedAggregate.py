@@ -63,8 +63,8 @@ class spidroinAggregateGenerator(BBG):
 
         # compute the positions and orientations of each individual spidroin within it's cluster
         spidroinPositionInfo = spidroinPositionBB.blockXYZVals
-        spidroinPositions = [ (pos + spidroinPositionInfo[2*i + 1])/2.0 for i, pos in enumerate(spidroinPositionInfo[0:-2:2])]
-        spidroinDirectors = [ (2.0 * float(rnd.randint(0, 1)) - 1.0) * (spidroinPositionInfo[2*i + 1] - pos) for i, pos in enumerate(spidroinPositionInfo[0:-2:2])]
+        spidroinPositions = [ (pos + spidroinPositionInfo[2*i + 1])/2.0 for i, pos in enumerate(spidroinPositionInfo[0:-1:2])]
+        spidroinDirectors = [ (2.0 * float(rnd.randint(0, 1)) - 1.0) * (spidroinPositionInfo[2*i + 1] - pos) for i, pos in enumerate(spidroinPositionInfo[0:-1:2])]
         spidroinDirectorsHat = [ director/np.linalg.norm(director) for director in spidroinDirectors]
         spidroinRots = [ rnd.uniform(0.0, 360.0) for _ in range(0, self.numPointsInCluster)]
 
@@ -79,8 +79,8 @@ class spidroinAggregateGenerator(BBG):
                                                                   self.clusterRX, 
                                                                   2)
         clusterPositionInfo = clusterPositionBB.blockXYZVals
-        clusterPositions = [ (pos + clusterPositionInfo[2*i + 1])/2.0 for i, pos in enumerate(clusterPositionInfo[0:-2:2])]
-        clusterDirectors = [ (clusterPositionInfo[2*i + 1] - pos) for i, pos in enumerate(clusterPositionInfo[0:-2:2])]
+        clusterPositions = [ (pos + clusterPositionInfo[2*i + 1])/2.0 for i, pos in enumerate(clusterPositionInfo[0:-1:2])]
+        clusterDirectors = [ (clusterPositionInfo[2*i + 1] - pos) for i, pos in enumerate(clusterPositionInfo[0:-1:2])]
         clusterDirectorsHat = [ clustDir/np.linalg.norm(clustDir) for clustDir in clusterDirectors ]
         clusterRots = [ 0.0 for _ in range(0, self.numClustersInAggregate)]
 
