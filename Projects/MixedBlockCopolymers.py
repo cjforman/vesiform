@@ -63,22 +63,35 @@ if __name__=="__main__":
 
     
     bondLength = 1.5
+    AtomicMinDist = 1.0
     numA = 15
     numB = 135
     numMonomersPerPolymer = numA + numB
-    numPolymersPerSphere = 180 
-    FMaxRadius = 40
-    FMinRadius = 20
-    FZ1 = 500
-    FZ2 = 100
-    alpha1= 40
-    alpha2 = 80
-    beta1= 130
-    beta2 = 180
-    AtomicMinDist = 1.0
+    numPolymersPerSphere_A = 50 
+    FMaxRadius_A = 20
+    FMinRadius_A = 2
+    FZ1_A = 500
+    FZ2_A = 5
+    alpha1_A= 40
+    alpha2_A = 60
+    beta1_A = 165
+    beta2_A = 185
+    
 
-    makeSphereAndPolymers(numA, numB, numPolymersPerSphere, FMaxRadius, FMinRadius, FZ1, FZ2, alpha1, alpha2, beta1, beta2 , AtomicMinDist, bondLength, "A_15_B_135")
-    makeSphereAndPolymers(numB, numA, numPolymersPerSphere, FMaxRadius, FMinRadius, FZ1, FZ2, alpha1, alpha2, beta1, beta2 , AtomicMinDist, bondLength, "A_135_B_15")
+    # makeSphereAndPolymers(numA, numB, numPolymersPerSphere_A, FMaxRadius_A, FMinRadius_A, FZ1_A, FZ2_A, alpha1_A, alpha2_A, beta1_A, beta2_A, AtomicMinDist, bondLength, "A_15_B_135")
+    
+    
+    numPolymersPerSphere_B = 73
+    FMaxRadius_B = 20
+    FMinRadius_B = 4
+    FZ1_B = 150
+    FZ2_B = 12
+    alpha1_B= 40
+    alpha2_B = 50
+    beta1_B = 145
+    beta2_B = 155
+    
+    makeSphereAndPolymers(numB, numA, numPolymersPerSphere_B, FMaxRadius_B, FMinRadius_B, FZ1_B, FZ2_B, alpha1_B, alpha2_B, beta1_B, beta2_B , AtomicMinDist, bondLength, "A_135_B_15")
 
 
 print "example done"

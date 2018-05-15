@@ -291,7 +291,7 @@ def bondAngle(p1, p2, p3):
     # construct the TNB frame
     TNB = constructTNBFrame(p1, p2, p3)
 
-    if TNB==None:
+    if TNB.all()==None:
         # co linear points so bond angle is either 0 or 180.
         # if line segment 1 to 3 is great than 1 to 2 then we have 180 else 0
         lineSeg1To3 = np.linalg.norm(p3-p1)
@@ -322,13 +322,13 @@ def Dihedral(p1, p2, p3, p4):
     # BHat = m1Hat = n1Hat x b2Hat = nHat x THat)
     dihedral = None #assume failure
     TNB1 = constructTNBFrame(p1, p2, p3)
-    if TNB1!=None:
+    if TNB1.all()!=None:
         TNB2 = constructTNBFrame(p2, p3, p4)
-        if TNB2!=None:
+        if TNB2.all()!=None:
             # the dihedral is the angle between N2 (from TNB2) and N1 from TNB1, in the N1, B1 plane.
             dihedral = np.arctan2(-np.dot(TNB1[2], TNB2[1]), np.dot(TNB1[1], TNB2[1])) 
     
-    if TNB1==None or TNB2==None:
+    if TNB1.any()==None or TNB2.any()==None:
         dihedral=0.0
     
     return dihedral

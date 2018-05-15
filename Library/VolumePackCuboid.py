@@ -51,7 +51,8 @@ class VolumePackCuboidBBG(NBB):
     def pickRandomPointInDefinedSpace(self):
         return np.array( [ rnd.uniform( self.xRange1, self.xRange2 ), 
                            rnd.uniform( self.yRange1, self.yRange2 ),
-                           rnd.uniform( self.zRange1, self.zRange2 )] )
+                           rnd.uniform( self.zRange1, self.zRange2 )] ) 
+
     def getParams(self):
         return self.params 
         

@@ -333,7 +333,7 @@ class BuildingBlock():
         
     def addConnectors(self, connectors, indexOffset=0):
         # checks to see if we are adding connectors for first time (connectors list has no entry in it)
-        if len(self.blockConnectors)==1: 
+        if len(self.blockConnectors)==0: 
             if len(connectors[0]==0):
                 self.blockConnectors = connectors + indexOffset
         else:
@@ -399,12 +399,12 @@ if __name__=="__main__":
     helix2.exportBBK('alphaHelix2')
      
     # set up the angles and displacement between the two building blocks
-    alpha1Inp = -45.0
-    beta1Inp = 179.0  
-    alpha2Inp = -0.0
-    beta2Inp = 135.0  
-    alpha3Inp = -0.0
-    displacementInp = 15.0
+    alpha1Inp = -57.0
+    beta1Inp = 116.0  
+    alpha2Inp = 180.0
+    beta2Inp = 122.0  
+    alpha3Inp = -47.0
+    displacementInp = 1.47
      
     sConnectionIndex = 1
     mConnectionIndex = 0

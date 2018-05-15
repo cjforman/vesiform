@@ -59,7 +59,11 @@ def getPrincipalAxis(listOfVectors):
 
     iTensor = np.array([[0,0,0], [0,0,0], [0,0,0]])
 
-    for v in listOfVectors:
+    COM = getCentreOfMass(listOfVectors)
+
+    for u in listOfVectors:
+        # make sure that we calculate the PrincipleComponents in the COM frame
+        v = u - COM
         iTensor[0][0] += v[1]**2 + v[2]**2
         iTensor[1][1] += v[0]**2 + v[2]**2
         iTensor[2][2] += v[0]**2 + v[1]**2        
@@ -73,8 +77,36 @@ def getPrincipalAxis(listOfVectors):
     # get the eigen values and vectors of the inertia tensor
     eig = np.linalg.eig(iTensor)
     
-    # Take the eigenvector which corresponds to the smallest eigenvalue
-    return  eig[1][np.argmax(eig[0]),:]
+    # Take the eigenvector which corresponds to the largest eigenvalue
+     
+    # makes zeros zero.
+    if np.abs(eig[0][0]) < 1e-8:
+        eig[0][0] = 0.0
+    if np.abs(eig[0][1]) < 1e-8:
+        eig[0][1] = 0.0
+    if np.abs(eig[0][2]) < 1e-8:
+        eig[0][2] = 0.0        
+
+    
+    # if there are three distinct eigenvalues then take evector corresponding to smallest    
+    if len(np.unique(eig[0]))==3:
+        pVec = eig[1][np.argmin(eig[0]), :]
+
+    #if two of the eigenvalues are the same then pick the unique one.
+    # symmetric object so pick the eigen value that is orthogonal to the symmetry.        
+    if len(np.unique(eig[0]))==2:
+        if eig[0][0]==eig[0][1]:
+            pVec = eig[1][2, :]
+        if eig[0][0]==eig[0][2]:
+            pVec = eig[1][1, :]
+        if eig[0][1]==eig[0][2]:
+            pVec = eig[1][0, :]
+
+    # completely symmetric so any axis is fine.            
+    if len(np.unique(eig[0]))==1:       
+        pVec = eig[1][np.argmin(eig[0]), :]
+        
+    return  pVec 
 
 def rotPAboutAxisAtPoint(p, p0, n, angle):
     # rotates the vector P about an axis n through the point p0 by an angle.
@@ -176,6 +208,12 @@ def closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2):
     return np.dot(c1 - c2, c1 - c2)
 
 if __name__ == "__main__":
+    
+    
+    listOfVectors = [ np.array([1.0, 1.0, 0.0]), np.array([-1.0, -1.0, 0.0]), np.array([-1.0, 1.0, 0.0]), np.array([1.0, -1.0, 0.0])]
+    pAxis = getPrincipalAxis(listOfVectors)
+    print pAxis
+    
     
     p1 = np.array([-10.0, 0.0, 0.0])
     q1 = np.array([ -1.0, 0.0, 0.0])
