@@ -91,7 +91,9 @@ class ConstrainedPolymerPackBBG(BBG):
                                numCrankMoves,
                                pointsToAvoid=[],
                                visualiseEnvelope=(0,20),
-                               envelopeList=["None"]):
+                               envelopeList=["None"],
+                               angularRange=["None"],
+                               startDirector=["None"]):
 
         self.numPoints = numPoints
         self.pointA = pointA
@@ -100,11 +102,15 @@ class ConstrainedPolymerPackBBG(BBG):
         self.bondLength = float(bondLength)
         self.minDist = minDist
         self.numCrankMoves = numCrankMoves
+        self.angularRange = angularRange
+        self.startDirector = startDirector
         self.blockNames = self.generateBuildingBlockNames()
         self.allowedList = self.generateAllowedList()
         blockDirector = self.generateBuildingBlockDirector()
         self.blockDirectorHat = blockDirector/np.linalg.norm(blockDirector)
         self.blockRefPoint= self.generateBuildingBlockRefPoint()
+        self.parseEnvelopeList(envelopeList)
+        
         
         # from the points to avoid list only remember those that would pass the specified envelope test
         self.pointsToAvoid = pointsToAvoid
@@ -122,7 +128,10 @@ class ConstrainedPolymerPackBBG(BBG):
         return BBG.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid)
 
     def generateBuildingBlockDirector(self):
-        director = self.pointB - self.pointA
+        if self.startDirector[0] == 'None':
+            director = self.pointB - self.pointA
+        else:
+            director = self.startDirector
         return  director/np.linalg.norm(director)
     
     def generateBuildingBlockRefPoint(self):
@@ -183,8 +192,16 @@ class ConstrainedPolymerPackBBG(BBG):
             # construct TNB frame from last three points of the space curve 
             tnb = coords.constructTNBFrame(spaceCurve[-3], spaceCurve[-2], spaceCurve[-1])
             
-            # compute a new direction based on beta and alpha
-            dirn = coords.generateTNBVecXYZ(tnb, self.beta, self.alpha)
+            if self.angularRange[0]=='None':
+                # compute a new direction based on beta and alpha
+                alpha = self.alpha
+                beta = self.beta
+            else:
+                # if the angular range is set then pick a random direction. (hope it's not too madly self intersecting. Got a bit chill about that later on.
+                # careful narrow choices of ranges can give good results without checking for intersections.
+                alpha = rnd.uniform(self.angularRange[0], self.angularRange[1])
+                beta = rnd.uniform(self.angularRange[2], self.angularRange[3])
+            dirn = coords.generateTNBVecXYZ(tnb, beta, alpha)
             
             # construct next space curve point 
             spaceCurve.append(spaceCurve[-1] + b * dirn/np.linalg.norm(dirn))
@@ -343,6 +360,7 @@ class ConstrainedPolymerPackBBG(BBG):
         numMoves = 0
         curMin = 0
         threshold = 1.0
+        
         while minNumIndicesOutside > 0 and numMoves < self.maxNumFoldingMoves:
             
             # Do the crank shaft move on the current working set. 
