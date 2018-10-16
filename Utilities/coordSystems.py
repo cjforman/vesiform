@@ -738,6 +738,28 @@ def pickRandomPointInEllipsoid(rx, ry, rz):
     z = rz * r * np.sin(theta)
     return np.array([x, y, z])
 
+def pickRandomPointInSphericalRange(r1, r2, theta1, theta2, phi1, phi2):
+    rMin = min(r1, r2)
+    rMax = max(r1, r2)
+    r = np.sqrt(rnd.uniform(rMin/rMax, 1.0))
+    
+    phiMin = min(phi1, phi2)
+    phiMax = max(phi1, phi2)
+    phi = pickRandomPointOnUnitCircle()
+    while phi<phiMin or phi > phiMax:
+        phi = pickRandomPointOnUnitCircle() # -pi to pi
+    thetaMin = min(theta1, theta2)
+    thetaMax = max(theta1, theta2)
+    theta = pickRandomPointOnUnitCircle()/2.0 # -pi/2 to pi/2
+    while theta < thetaMin or theta > thetaMax:
+        theta = pickRandomPointOnUnitCircle()/2.0 # -pi/2 to pi/2
+
+    x = r * np.cos(theta)*np.cos(phi)
+    y = r * np.cos(theta)*np.sin(phi)
+    z = r * np.sin(theta)
+    return np.array([x, y, z])
+
+
 def pickRandomPointInEllipsoidRange(rx, ry, rz, theta1, theta2, phi1, phi2):
     r = np.sqrt(rnd.uniform(0.0, 1.0))
     

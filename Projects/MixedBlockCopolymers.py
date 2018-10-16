@@ -94,4 +94,4 @@ if __name__=="__main__":
     makeSphereAndPolymers(numB, numA, numPolymersPerSphere_B, FMaxRadius_B, FMinRadius_B, FZ1_B, FZ2_B, alpha1_B, alpha2_B, beta1_B, beta2_B , AtomicMinDist, bondLength, "A_135_B_15")
 
 
-print "example done"
+    print "example done"

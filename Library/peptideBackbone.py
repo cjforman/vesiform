@@ -45,7 +45,7 @@ class peptideBackboneGenerator(BBG):
         self.seedResidue = seedResidue
         if not seedResidue==None:
             if not len(seedResidue)==3:
-                print "Warning: Seed residue in peptide backbone genertor is not 3 atoms long" 
+                print "Warning: Seed residue in peptide backbone generator is not 3 atoms long" 
         minDistDummy = 1.0
         
         return BBG.generateBuildingBlock(self, self.numPoints, minDistDummy, showBlockDirector=showBlockDirector)
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     backboneObject = peptideBackboneGenerator(filename)
 
     # generate backbone realtime parameters
-    numResidues = 16
+    numResidues = 15
     startPos = np.array([0.0, 0.0, 0.0])
     director = np.array([0.0, 0.0, 1.0])
     rotation = 0 * np.pi/180

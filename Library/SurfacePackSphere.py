@@ -48,14 +48,19 @@ class SurfacePackSphereBBG(NBB):
         return NBB.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, pointsToAvoid=pointsToAvoid, showBlockDirector=showBlockDirector, visualiseEnvelope=(0,200))
     
     def generateBuildingBlockDirector(self):
-        return np.array([0,0,1])
+        return np.array([0.0, 0.0, 1.0])
 
     def generateBuildingBlockRefPoint(self):
         return np.array([0.0, 0.0, 0.0])
 
     def pickFirstPoints(self):
-        # select the first point in the NList 
-        self.nList = [self.pickRandomPointInDefinedSpace()]
+        inbounds=False
+        while inbounds==False:
+            # select the first point in the NList 
+            newPoint = self.pickRandomPointInDefinedSpace()
+            inbounds = self.checkPointInBounds(newPoint)
+        
+        self.nList = [self.convertPointToXYZ(newPoint)]
         self.nAttempts = [0]             
         return True
     
@@ -65,22 +70,22 @@ class SurfacePackSphereBBG(NBB):
         
         outBounds = False
         
-        if pos[2] < self.phi1:
+        if pos[2] <= self.phi1:
             outBounds = True
             if self.verbose==1: 
                 print("phi1 violation")             
         
-        if pos[2] > self.phi2:
+        if pos[2] >= self.phi2:
             outBounds = True
             if self.verbose==1: 
                 print("phi2 violation")             
 
-        if pos[1] < self.theta1:
+        if pos[1] <= self.theta1:
             outBounds = True
             if self.verbose==1: 
                 print("theta1 violation")             
         
-        if pos[1] > self.theta2:
+        if pos[1] >= self.theta2:
             outBounds = True
             if self.verbose==1: 
                 print("theta2 violation")             
@@ -114,15 +119,15 @@ if __name__ == '__main__':
 
     # create the NPackBB object.
     SphereNBB = SurfacePackSphereBBG(filename)
-    numPoints = 300
+    numPoints = 70
     centerPos = np.array([-0,-0, -0])
     director = np.array([1, 1, 1])
     rotation = 0
-    radius = 20
-    theta1 = -90
-    theta2 = 90
-    phi1 = -135
-    phi2 = 135
+    radius = 20.0
+    theta1 = -90.0
+    theta2 = 90.0
+    phi1 = 45.0
+    phi2 = 90.0
     minDist = 2.5
     
     # generate the XYZVals in the packed spaced
@@ -130,13 +135,13 @@ if __name__ == '__main__':
     SphereBB.transformBBToLabFrame(director, centerPos, rotation)
     SphereBB.exportBBK("sphere1")
     
-    Sphere2BB = SphereNBB.generateBuildingBlock(numPoints, radius + 2 * minDist, theta1, theta2, phi1, phi2, minDist)
-    Sphere2BB.transformBBToLabFrame(director, centerPos, rotation)
-    Sphere2BB.exportBBK("sphere2")
+   # Sphere2BB = SphereNBB.generateBuildingBlock(numPoints, radius + 2 * minDist, theta1, theta2, phi1, phi2, minDist)
+   # Sphere2BB.transformBBToLabFrame(director, centerPos, rotation)
+   # Sphere2BB.exportBBK("sphere2")
     
-    Sphere3BB = SphereNBB.generateBuildingBlock(numPoints, radius + 4 * minDist, theta1, theta2, phi1, phi2, minDist)
-    Sphere3BB.transformBBToLabFrame(director, centerPos, rotation)
-    Sphere3BB.exportBBK("sphere3")
+   # Sphere3BB = SphereNBB.generateBuildingBlock(numPoints, radius + 4 * minDist, theta1, theta2, phi1, phi2, minDist)
+   # Sphere3BB.transformBBToLabFrame(director, centerPos, rotation)
+   # Sphere3BB.exportBBK("sphere3")
     
     
     

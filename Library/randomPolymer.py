@@ -83,7 +83,7 @@ class RandomPolymerPackBBG(BBG):
                                minDist,
                                bondLength,
                                pointsToAvoid=[],
-                               visualiseEnvelope=(0,20, 'envelope.xyz'),
+                               visualiseEnvelope=(0, 20, 'envelope.xyz'),
                                envelopeList=["None"],
                                showBlockDirector=False):
 
@@ -135,7 +135,6 @@ class RandomPolymerPackBBG(BBG):
         return allowed
         
     def generateBuildingBlockXYZ(self):
-        print "Generate initial conformation."
         xyzVals = self.generateSpaceCurve()
         
         if self.dumpInterimFiles==1:
@@ -261,7 +260,8 @@ class RandomPolymerPackBBG(BBG):
                     fIO.saveXYZ(minXYZVals, 'C', 'min'+str(curMin)+'.xyz')
                 
                 
-                print "step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside
+                if self.verbose==1:
+                    print "step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside
                  
             # if the new move means that the num indices outside has gone up above the curXYZVals then 
             # roll the die to decide whether or not to replace the curXYZVals
@@ -274,7 +274,7 @@ class RandomPolymerPackBBG(BBG):
             
             numMoves += 1
 
-            if numMoves % 10==0:                 
+            if numMoves % 10==0 and self.verbose==1:                 
                 print "step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside
         
         if minNumIndicesOutside > 0:

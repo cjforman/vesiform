@@ -38,7 +38,7 @@ class keyProc():
         
         # report on initialisation process
         if self.noLoadErrors==True:
-            print "Parameters loaded and initialised successfully"
+            pass#print "Parameters loaded and initialised successfully"
         else:
             print "Error loading parameters"
             self.dumpParams()

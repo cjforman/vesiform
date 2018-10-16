@@ -46,9 +46,12 @@ class BuildingBlockGenerator(keyProc):
             print "Critical Parameters are undefined for BuildingBlockGenerator"
             sys.exit()        
 
-    def generateBuildingBlock(self, numPoints, minDist, showBlockDirector=False, visualiseEnvelope=(0,20, 'envelope.xyz'), envelopeList=['None'], pointsToAvoid=[]):
+    def generateBuildingBlock(self, numPoints, minDist, showBlockDirector=False, visualiseEnvelope=(0, 20, 'envelope.xyz'), envelopeList=['None'], pointsToAvoid=[], defaultBlockRefPoint=None):
         # Returns a building block object with numPoints xyz values and names.  
         # A reference point and principal direction of the building block are defined in the block Ref Frame.
+        
+        if defaultBlockRefPoint is not None:
+            self.blockRefPoint = defaultBlockRefPoint
             
         # store num points
         self.numPoints = numPoints
@@ -65,11 +68,10 @@ class BuildingBlockGenerator(keyProc):
             self.visualiseEnvelope(visualiseEnvelope[0], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[2])
 
         # from the points to avoid list only remember those that would pass the specified envelope test
-        print "dumping pointsToAvoid already excluded by envelope"
         self.pointsToAvoid =[]
         self.pointsToAvoid = [ pointsToAvoid[index] for index in range(len(pointsToAvoid)) if not index in self.checkAllPointsInBounds(pointsToAvoid) ]
 
-        # dump the pointsToAvoid if we're dumping files
+        # save the pointsToAvoid if we're dumping files
         if self.dumpInterimFiles==1:
             fIO.saveXYZ(self.pointsToAvoid, 'Li', "pointsToAvoid.xyz")
         
@@ -149,6 +151,7 @@ class BuildingBlockGenerator(keyProc):
     def checkPointInBounds(self, pos, ignorePTA=False):
         # checks the external conditions that we wish to enforce on the points
         # These are either points to avoid or envelopes (regions of space that are out of bounds). 
+        # pos is in xyz coords
         
         # assume the pos is inBounds to begin with.
         inBounds = True
@@ -171,7 +174,7 @@ class BuildingBlockGenerator(keyProc):
 
         # Always check to see if we are still inBounds before performing what can be a lengthy test.
         if inBounds:
-            # in this envelope any point outside the sphere is out of bounds
+            # in this envelope any point outside the sphere centered at blockRefPoint is out of bounds
             try:
                 envelopeParams = self.envelopeSummary['outersphere']
                 # sphere centered at refPoint with input radius
@@ -184,7 +187,7 @@ class BuildingBlockGenerator(keyProc):
                 pass
 
         if inBounds:        
-            # in this envelope any point inside the inner sphere is out of bounds
+            # in this envelope any point inside the inner sphere centered at blockRefPoint is out of bounds
             try:
                 envelopeParams = self.envelopeSummary['innersphere']
                 # sphere is centered at blockRefPoint.
@@ -193,6 +196,49 @@ class BuildingBlockGenerator(keyProc):
                     if self.verbose==1:
                         print "innerSphere Violation"
                     inBounds=False
+            except KeyError:
+                pass
+
+        if inBounds:        
+            # ensure that the wedge is inside the spherical polar region
+            # defined by theta1, theta2, phi1 and phi2
+            # -pi/2 < theta < pi/2
+            # -pi < phi < pi  
+            try:
+                envelopeParams = self.envelopeSummary['sphericalWedge']
+                
+                theta1 = envelopeParams[0]
+                theta2 = envelopeParams[1]
+                phi1 = envelopeParams[2]
+                phi2 = envelopeParams[3]
+                inside = envelopeParams[4] # determines where point should be inside or outside defined region
+                thetaMin = min(theta1, theta2)
+                thetaMax = max(theta1, theta2)
+                phiMin = min(phi1, phi2)
+                phiMax = max(phi1, phi2)                
+                xyzSpherical = coords.XYZ2SphericalPolar(pos)
+                
+                inBounds = True
+                if inside >= 0:
+                    if xyzSpherical[1] < thetaMin or xyzSpherical[1] > thetaMax:
+                        if self.verbose==1:
+                            print "Spherical Wedge Violation"
+                        inBounds=False
+                    if xyzSpherical[2] < phiMin or xyzSpherical[2] > phiMax:
+                        if self.verbose==1:
+                            print "Spherical Wedge Violation"
+                        inBounds=False
+
+                if inside < 0:
+                    if xyzSpherical[1] > thetaMin and xyzSpherical[1] < thetaMax:
+                        if self.verbose==1:
+                            print "Spherical Wedge Violation"
+                        inBounds=False
+                    if xyzSpherical[2] > phiMin and xyzSpherical[2] < phiMax:
+                        if self.verbose==1:
+                            print "Spherical Wedge Violation"
+                        inBounds=False
+                    
             except KeyError:
                 pass
         

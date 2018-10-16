@@ -48,10 +48,10 @@ class NPackBB(BBG):
             print "Critical Parameters are undefined for NPack object"
             sys.exit()
     
-    def generateBuildingBlock(self, numPoints, minDist, envelopeList='[None]', pointsToAvoid=[], visualiseEnvelope=(0,200), showBlockDirector=False):
+    def generateBuildingBlock(self, numPoints, minDist, envelopeList='[None]', pointsToAvoid=[], visualiseEnvelope=(0,200), showBlockDirector=False, defaultBlockRefPoint=None):
         self.numPoints = numPoints
         self.minDist = minDist
-        return BBG.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, pointsToAvoid=pointsToAvoid, visualiseEnvelope=visualiseEnvelope, showBlockDirector=showBlockDirector)
+        return BBG.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, pointsToAvoid=pointsToAvoid, visualiseEnvelope=visualiseEnvelope, showBlockDirector=showBlockDirector, defaultBlockRefPoint=defaultBlockRefPoint)
     
     def generateBuildingBlockXYZ(self):
         # this is the main new bit for this class relative to the old NPack class.

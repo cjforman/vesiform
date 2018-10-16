@@ -26,7 +26,7 @@ class VolumePackEllipsoidBBG(NBB):
             print "Critical Parameters are undefined for NPackBBG object"
             sys.exit()        
     
-    def generateBuildingBlock(self, numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, minDist, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200,'envelope.xyz'), showBlockDirector=False):
+    def generateBuildingBlock(self, numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, minDist, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200,'envelope.xyz'), showBlockDirector=False, defaultBlockRefPoint=None):
         self.xRadius = xRadius
         self.yRadius = yRadius
         self.zRadius = zRadius
@@ -34,7 +34,7 @@ class VolumePackEllipsoidBBG(NBB):
         self.theta2 = theta2 * np.pi/180.0
         self.phi1 = phi1 * np.pi/180.0
         self.phi2 = phi2 * np.pi/180.0
-        return NBB.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, pointsToAvoid=pointsToAvoid, visualiseEnvelope=visualiseEnvelope, showBlockDirector=showBlockDirector)
+        return NBB.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, pointsToAvoid=pointsToAvoid, visualiseEnvelope=visualiseEnvelope, showBlockDirector=showBlockDirector, defaultBlockRefPoint=defaultBlockRefPoint)
     
     def generateBuildingBlockDirector(self):
         director = np.array([0.0, 0.0, 1.0])
@@ -44,7 +44,11 @@ class VolumePackEllipsoidBBG(NBB):
         return np.array([0.0, 0.0, 0.0])
     
     def pickFirstPoints(self):
-        self.nList = [self.pickRandomPointInDefinedSpace()]
+        inbounds = False
+        while inbounds==False:
+            newPoint = self.pickRandomPointInDefinedSpace()
+            inbounds = self.checkPointInBounds(newPoint)
+        self.nList = [self.convertPointToXYZ(newPoint)]
         self.nAttempts = [0]
         return True
         
@@ -62,19 +66,25 @@ if __name__ == '__main__':
     # create the NPack object.
     EllipsoidPackBBG = VolumePackEllipsoidBBG(filename)
 
-    numPoints = 600
+    numPoints = 300
     centrePos = np.array([0, 0, 0])
     director= np.array([0, 0, 1])
     rotation = 0 
-    xRadius = 10
-    yRadius = 10
-    zRadius = 10
+    xRadius = 100
+    yRadius = 100
+    zRadius = 100
     minDist = 1
+    theta1 = -90.0
+    theta2 = 90.0
+    phi1 = 45.0
+    phi2 = 90.0
     
     envelopeList = ['None']
-       
+    envelopeList = ['innersphere 60',
+                    'outersphere 80']       
     # generate the building block
-    EllipsoidPackBB = EllipsoidPackBBG.generateBuildingBlock(numPoints, xRadius, yRadius, zRadius, minDist, envelopeList = envelopeList)
+    EllipsoidPackBB = EllipsoidPackBBG.generateBuildingBlock(numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, minDist, envelopeList = envelopeList, defaultBlockRefPoint=centrePos)
     EllipsoidPackBB.transformBBToLabFrame(director, centrePos, rotation)
+    EllipsoidPackBB.blockAtomNames[0]='P'
     EllipsoidPackBB.exportBBK(fIO.fileRootFromInfile(filename,'txt'))
     
