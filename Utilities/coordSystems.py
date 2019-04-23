@@ -5,7 +5,7 @@ Created on 14 Dec 2017
 '''
 import numpy as np
 import random as rnd
-import cartesian as cart
+import Utilities.cartesian as cart
 import Utilities.fileIO as FIO
 
 # ***** Co-ordinate system specific functions ****** 
@@ -145,6 +145,21 @@ def isZero(p1, epsilon):
     return zero
 
 def axisFromHelix(xyzList):
+    ''' returns normalised vector in direction of mean of cross product of adjacent bivectors 
+    for a sequence of points in space. If the points are in a helix, this returns the axis of the helix. 
+    to understand this better:  The tangent vectors are the vectors between successive points. 
+    Any two adjacent tangents form a plane.  The bivector bisects the internal angle between the tangent
+    in the plane of the two tangents.  The cross product of two adjacent bivectors should yield a 
+    vector that is approximately aligned with the axis of a helix if the original points are on a helix. 
+    We take the mean of all those vectors as defined an axis for a set of points. Returns the unit 
+    vector in that direction. '''
+    
+    if len(xyzList)==0 or len(xyzList)==1:
+        return np.array([0.0, 0.0, 1.0])
+    
+    if len(xyzList)==2:
+        return (xyzList[1] - xyzList[0])/np.linalg.norm((xyzList[1] - xyzList[0])) 
+    
     # compute tangent unit vectors of backbone
     TangentVectors = [ x- y for x, y in zip(xyzList[1:], xyzList[0:-1])]
     TangentVectorsHat = [T/np.linalg.norm(T) for T in TangentVectors]
@@ -462,7 +477,7 @@ def FrustumZAtZeroRadius(z1, z2, r1, r2):
             c = r1 - z1 * m            
             retZ = -c/m
     if retZ==None:
-        print "Warning: attempt to find zero point of cone that is actually a cylinder."
+        print("Warning: attempt to find zero point of cone that is actually a cylinder.")
     
     return retZ
         
@@ -693,7 +708,7 @@ def pickRandomPointOnUnitCircleInAngRange(phi1, phi2):
         v = rnd.uniform(0.0, 1.0)
         phi = (phiMax - phiMin) *v + phiMin  # phi1 to phi2.
     else:
-        print"Phi Range too small"
+        print("Phi Range too small")
         phi = None
     return phi    
 
@@ -715,7 +730,7 @@ def pickRandomPointInAnnulus(r1, r2, phi1, phi2):
             r = rMax * np.sqrt(rnd.uniform(0, 1))
     else:
         # if the two r's are too close in value then return None
-        print "Annulus too thin to pick a random point. r1 = r2"
+        print("Annulus too thin to pick a random point. r1 = r2")
         r=None
         phi=None
 
@@ -825,7 +840,7 @@ if __name__== '__main__':
                    
     FIO.saveXYZ(pos, 'C', "ellispoid.xyz")
     
-    print "LabToBlockTransformation"
+    print("LabToBlockTransformation")
     labRefPoint = np.array([10.0, 10.0, 10.0])
     labDirector = np.array([1.0, 1.0, 1.0])
     labRotation = 20 * np.pi/180.0
@@ -884,17 +899,17 @@ if __name__== '__main__':
     
     # construct TNB frame for the end of this polymer of 3 particles
     TNB = constructTNBFrame(v1, v2, v3) # tangent should be llel with Z axis, B 
-    print TNB
-    print "tHat.zHat = 1: ", np.dot(TNB[0], np.array([0,0,1])) # should be a 1
-    print "tHat.tHat= 1: ", np.dot(TNB[0], TNB[0])   
-    print "nHat.nHat= 1: ", np.dot(TNB[1], TNB[1])
-    print "bHat.bHat= 1: ", np.dot(TNB[2], TNB[2])
-    print "tHat.nHat= 0: ", np.dot(TNB[0], TNB[1])
-    print "nHat.bHat= 0: ", np.dot(TNB[1], TNB[2])
-    print "tHat.bHat= 0: ", np.dot(TNB[0], TNB[2])
+    print(TNB)
+    print("tHat.zHat = 1: ", np.dot(TNB[0], np.array([0,0,1]))) # should be a 1
+    print( "tHat.tHat= 1: ", np.dot(TNB[0], TNB[0]) )
+    print( "nHat.nHat= 1: ", np.dot(TNB[1], TNB[1]) )
+    print( "bHat.bHat= 1: ", np.dot(TNB[2], TNB[2]) )
+    print( "tHat.nHat= 0: ", np.dot(TNB[0], TNB[1]) )
+    print( "nHat.bHat= 0: ", np.dot(TNB[1], TNB[2]) )
+    print( "tHat.bHat= 0: ", np.dot(TNB[0], TNB[2]) )
     
     # test bond angle
-    print "Bond Angle"
+    print("Bond Angle")
     angles = [-180, -135, -90, -45, 0, 45, 90, 135, 180, 225, 270, 315, 360]
     p1 = np.array([0,0,0])
     p2 = np.array([1,0,0])
@@ -903,7 +918,7 @@ if __name__== '__main__':
         print(angle,  bondAngle(p1, p2, p3) * 180.0/np.pi )    
 
     # test dihedral
-    print "Dihedral Angle"    
+    print("Dihedral Angle")    
     angles = [-180, -135, -90, -45, 0, 45, 90, 135, 180, 225, 270, 315, 360]
     p1 = np.array([0,0,0])
     p2 = np.array([1,0,0])
@@ -926,7 +941,7 @@ if __name__== '__main__':
     #export    
     points.append(newPoint)
     FIO.saveXYZ(points, 'C', "rotatePointsInChain.xyz")
-    print "Done rotatePointsInChain"        
+    print("Done rotatePointsInChain")        
         
     # test rotate dihedral
     angle = 45 * np.pi/180
@@ -954,7 +969,7 @@ if __name__== '__main__':
     
     changeDihedral.append(newPos)
     FIO.saveXYZ(changeDihedral, 'C', "rotateDihedral.xyz")
-    print "Done rotateDihedral"        
+    print("Done rotateDihedral")        
     
     
     print("Testing generateTNBVecXYZ")
@@ -1014,15 +1029,15 @@ if __name__== '__main__':
     gXYZ = sphericalPolar2XYZ(gSP)
     hXYZ = sphericalPolar2XYZ(hSP)
     
-    print "Spherical"
-    print a, aSP, aXYZ
-    print b, bSP, bXYZ
-    print c, cSP, cXYZ
-    print d, dSP, dXYZ
-    print e, eSP, eXYZ
-    print f, fSP, fXYZ
-    print g, gSP, gXYZ
-    print h, hSP, hXYZ
+    print("Spherical" )
+    print(a, aSP, aXYZ )
+    print( b, bSP, bXYZ )
+    print( c, cSP, cXYZ )
+    print( d, dSP, dXYZ )
+    print( e, eSP, eXYZ )
+    print( f, fSP, fXYZ )
+    print( g, gSP, gXYZ )
+    print( h, hSP, hXYZ )
     
 
     aCyl = XYZ2Cyl(a)
@@ -1043,18 +1058,16 @@ if __name__== '__main__':
     gXYZCyl = cyl2XYZ(gCyl)
     hXYZCyl = cyl2XYZ(hCyl)
 
-    print "Cylindrical"
+    print( "Cylindrical" )
 
-    print a, aCyl, aXYZCyl
-    print b, bCyl, bXYZCyl
-    print c, cCyl, cXYZCyl
-    print d, dCyl, dXYZCyl
-    print e, eCyl, eXYZCyl
-    print f, fCyl, fXYZCyl
-    print g, gCyl, gXYZCyl
-    print h, hCyl, hXYZCyl
-
-    
+    print( a, aCyl, aXYZCyl )
+    print( b, bCyl, bXYZCyl )
+    print( c, cCyl, cXYZCyl )
+    print( d, dCyl, dXYZCyl )
+    print( e, eCyl, eXYZCyl )
+    print( f, fCyl, fXYZCyl )
+    print( g, gCyl, gXYZCyl )
+    print( h, hCyl, hXYZCyl )
     
   
     
@@ -1070,48 +1083,48 @@ if __name__== '__main__':
     tnbPointsXYZ.append(v2)
     tnbPointsXYZ.append(v3)
     FIO.saveXYZ(tnbPointsXYZ, 'C', "testTNBSelection.xyz")
-    print "Done TNB Selection"
+    print("Done TNB Selection")
     
     # testing the random selection algorithms
     frustumPointsXYZ = [ pickRandomPointInFrustumXYZ(-10.0, 10.0, 5.0, 20.0) for a in range(5000) ]
     FIO.saveXYZ(frustumPointsXYZ, 'C', "testFrustumFull.xyz")
-    print "Done Frustum Full"
+    print("Done Frustum Full")
 
     frustumPointsZHeightsXYZ = [ pickRandomPointInFrustumAtGivenZHeightXYZ(float(z), -10.0, 10.0, 5.0, 20.0) for z in range(-10, 12, 2) for b in range(100) ]
     FIO.saveXYZ(frustumPointsZHeightsXYZ, 'O', "testFrustumSelectedZ.xyz")
-    print "Done Frustum Selected Z"
+    print =("Done Frustum Selected Z")
 
 
     ellipsoidPoints = [ pickRandomPointUniformlyOnEllipsoid(10.0, 15.0, 20.0) for a in range(1000) ]
     ellipsoidPointsXYZ = [ sphericalPolar2XYZ( point ) for point in ellipsoidPoints ]  
     FIO.saveXYZ(ellipsoidPointsXYZ, 'C', "testEllipsoidFull.xyz")
-    print "Done Ellipsoids Full"
+    print("Done Ellipsoids Full")
      
     ellipsoidPointsRange = [ pickRandomPointUniformlyOnEllipsoidInAngRange(10, 15, 20, -45 * np.pi/180, 45 * np.pi/180, -30 * np.pi/180, 30 * np.pi/180) for a in range(1000) ]
     ellipsoidPointsRangeXYZ = [ sphericalPolar2XYZ( point ) for point in ellipsoidPointsRange ]  
     FIO.saveXYZ(ellipsoidPointsRangeXYZ, 'C', "testEllipsoidRange.xyz")
-    print "Done Ellipsoids range"
+    print("Done Ellipsoids range")
     
     spherePoints = [ pickRandomPointOnUnitSphere() for a in range(1000) ]
     spherePointsXYZ = [ sphericalPolar2XYZ( np.array( [10, point[0], point[1]] ) ) for point in spherePoints ]  
     FIO.saveXYZ(spherePointsXYZ, 'C', "testSphereFull.xyz")
-    print "Done Sphere Full"
+    print("Done Sphere Full")
         
     spherePointsRange = [ pickRandomPointOnUnitSphereInAngRange(-45 * np.pi/180, 45 * np.pi/180, -30 * np.pi/180, 30 * np.pi/180) for a in range(1000) ]
     spherePointsRangeXYZ = [ sphericalPolar2XYZ( np.array( [10, point[0], point[1]] ) ) for point in spherePointsRange ]  
     FIO.saveXYZ(spherePointsRangeXYZ, 'C', "testSphereRange.xyz")
-    print "Done Sphere Range"
+    print("Done Sphere Range")
 
     circlePoints = [ pickRandomPointOnUnitCircle() for a in range(1000) ]
     circlePointsXYZ  = [ np.array([10 * np.cos(point), 10*np.sin(point), 0.0]) for point in circlePoints ] 
     FIO.saveXYZ(circlePointsXYZ, 'C', "testCircleFull.xyz")
-    print "Done Circle Full"
+    print("Done Circle Full")
     
     circlePointsRange = [ pickRandomPointOnUnitCircleInAngRange(0 * np.pi/180, 90 * np.pi/180) for a in range(1000) ]
     circlePointsRangeXYZ  = [ np.array([10 * np.cos(point), 10*np.sin(point), 0.0]) for point in circlePointsRange ] 
     FIO.saveXYZ(circlePointsRangeXYZ, 'C', "testCircleRange.xyz")
-    print "Done Circle Range"
+    print("Done Circle Range")
     
-    print "done"
+    print("done")
     
     

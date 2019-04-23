@@ -23,7 +23,7 @@ class VolumePackCuboidBBG(NBB):
         NBB.initialiseParameters(self) 
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for PlanePack object"
+            print("Critical Parameters are undefined for PlanePack object")
             sys.exit()        
     
     def generateBuildingBlock(self, numPoints, xRange1, xRange2, yRange1, yRange2, zRange1, zRange2, minDist, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200), showBlockDirector=False):

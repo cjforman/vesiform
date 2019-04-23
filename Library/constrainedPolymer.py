@@ -79,7 +79,7 @@ class ConstrainedPolymerPackBBG(BBG):
         self.alpha = self.getParam("alpha") * np.pi/180.0
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for constrained polymer object"
+            print("Critical Parameters are undefined for constrained polymer object")
             sys.exit()
 
     def generateBuildingBlock( self, 
@@ -117,11 +117,11 @@ class ConstrainedPolymerPackBBG(BBG):
 
         # check starting points are legal or it's gonna be a long wait.
         if not self.checkPointInBounds(self.pointA):
-            print "Error Warning: PointA out of bounds"
+            print("Error Warning: PointA out of bounds")
             time.sleep(3)
              
         if not self.checkPointInBounds(self.pointB):
-            print "Error Warning: PointB out of bounds"
+            print("Error Warning: PointB out of bounds")
             time.sleep(3)
 
 
@@ -141,33 +141,33 @@ class ConstrainedPolymerPackBBG(BBG):
         return [self.particleName] * self.numPoints
 
     def checkBondLengths(self):
-        print [ np.linalg.norm(self.buildingBlockXYZ[i] - self.buildingBlockXYZ[i-1]) for i in range(1, len(self.buildingBlockXYZ)) ]       
+        print([ np.linalg.norm(self.buildingBlockXYZ[i] - self.buildingBlockXYZ[i-1]) for i in range(1, len(self.buildingBlockXYZ)) ])       
         
     def generateAllowedList(self, short=False):
         return [i for i in range(0, self.numPoints) ]
         
     def generateBuildingBlockXYZ(self):
-        print "Generate initial conformation."
+        print("Generate initial conformation.")
         xyzVals = self.generateSpaceCurve()
         
         if self.dumpInterimFiles==1:
             fIO.saveXYZList(xyzVals, self.blockNames, 'initialChain.xyz')
 
-        print "Minimising End Point with dihedral moves on allowed list"
+        print("Minimising End Point with dihedral moves on allowed list")
         # perform the energy minimisation that moves the free end to pointB
         xyzVals = self.minimiseEnergy(xyzVals)
         
         if self.dumpInterimFiles==1:
             fIO.saveXYZList(xyzVals, self.blockNames, 'pointBMinimised.xyz')
 
-        print "Randomising chain using crankshaft moves."
+        print("Randomising chain using crankshaft moves.")
         xyzVals, numValidMoves = self.crankShaftMoves(xyzVals, self.numCrankMoves, 1)
 
         if self.dumpInterimFiles==1 and self.numCrankMoves > 0:
             fIO.saveXYZList(xyzVals, self.blockNames, 'crankedChain.xyz')
         
         
-        print "Folding structure up."
+        print("Folding structure up.")
         xyzVals = self.foldInsideEnvelope(xyzVals)
 
         if self.dumpInterimFiles==1:
@@ -288,12 +288,13 @@ class ConstrainedPolymerPackBBG(BBG):
                 #    self.generateAllowedList(short=True)
           
                 curMin += 1 
-                self.outline(numMoves, self.maxNumConnectingMoves, minDist, minPE, maxStepRange )
-                if curMin <= 20 and self.dumpInterimFiles==1:
+                if self.dumpInterimFiles>1:
+                    self.outline(numMoves, self.maxNumConnectingMoves, minDist, minPE, maxStepRange )
+                if curMin <= 20 and self.dumpInterimFiles>1:
                     fIO.saveXYZ(lowestEnergyMinimum, 'Be', 'min_' + str(curMin) + '.xyz')
-                if curMin > 20 and curMin % 10 ==0 and self.dumpInterimFiles==1:
+                if curMin > 20 and curMin % 10 ==0 and self.dumpInterimFiles>1:
                     fIO.saveXYZ(lowestEnergyMinimum, 'Be', 'min_' + str(curMin) + '.xyz')
-                if curMin > 100 and curMin % 100 ==0 and self.dumpInterimFiles==1:
+                if curMin > 100 and curMin % 100 ==0 and self.dumpInterimFiles>1:
                     fIO.saveXYZ(lowestEnergyMinimum, 'Be', 'min_' + str(curMin) + '.xyz')
                 
             numMoves += 1
@@ -307,7 +308,7 @@ class ConstrainedPolymerPackBBG(BBG):
         return lowestEnergyMinimum
 
     def outline(self, n, M, d, E, R):
-        print n, "out of ", M, "minDist:", d, "minEnergy:", E, "maxStepRange:", R
+        print(n, "out of ", M, "minDist:", d, "minEnergy:", E, "maxStepRange:", R)
     
     def PE(self, xyzVals):
         PE = 0.0
@@ -331,7 +332,7 @@ class ConstrainedPolymerPackBBG(BBG):
             try:
                 atom2 = xyzVals[axisAtom1Index + 1]
             except IndexError:
-                print "Index Error"
+                print("Index Error")
             rotAxis = atom2 - atom1
             rotAxisHat = rotAxis/np.linalg.norm(rotAxis)
             
@@ -409,11 +410,11 @@ class ConstrainedPolymerPackBBG(BBG):
                 acceptedString = "rejected"
                 if acceptedMove==True:
                     acceptedString = "accepted"
-                print "step:", numMoves, "out of", self.maxNumFoldingMoves, "minNumIndicesOutside:", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside, "threshold", threshold, acceptedString
+                print("step:", numMoves, "out of", self.maxNumFoldingMoves, "minNumIndicesOutside:", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside, "threshold", threshold, acceptedString)
             numMoves += 1
 
         if minNumIndicesOutside > 0:
-            print "Warning: there are points outside the envelope that were not moved inside."
+            print("Warning: there are points outside the envelope that were not moved inside.")
             if self.dumpInterimFiles:
                 fIO.saveXYZ(minXYZVals[minIndices], 'B', 'outsideEnvelope.xyz')
                 
@@ -465,7 +466,7 @@ class ConstrainedPolymerPackBBG(BBG):
 
             numMoves += 1
             if numMoves % 20 == 0:
-                print numMoves, " out of ", numCrankShaftMoves 
+                print(numMoves, " out of ", numCrankShaftMoves) 
        
         return workingXYZVals, numValidMoves
 
@@ -548,7 +549,7 @@ class ConstrainedPolymerPackBBG(BBG):
             r_e = coords.ellipsoidalPolarUVW(polarPos[1], polarPos[2], envelopeParams[0], envelopeParams[1], envelopeParams[2])[0] # take first parameter of returned information which is distance to ellipsoid
             if polarPos[0] > r_e:
                 if self.verbose==1:
-                    print "outerEllipse Violation"
+                    print("outerEllipse Violation")
                 inBounds=False
         except KeyError:
             pass
@@ -597,4 +598,4 @@ if __name__ == '__main__':
                                                                                pointsToAvoid=pointsToAvoid)
     ConstrainedPolymerPackGBB.checkBondLengths()
     ConstrainedPolymerPackBB.exportBBK(fIO.fileRootFromInfile(filename, 'txt'))
-    print "constrainedPolymer Done"
+    print("constrainedPolymer Done")

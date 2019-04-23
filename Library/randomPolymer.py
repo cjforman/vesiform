@@ -70,7 +70,7 @@ class RandomPolymerPackBBG(BBG):
         self.dumpInterimFiles = self.getParam('dumpInterimFiles')
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for constrained polymer object"
+            print("Critical Parameters are undefined for constrained polymer object")
             sys.exit()
 
     def generateBuildingBlock( self, 
@@ -103,7 +103,7 @@ class RandomPolymerPackBBG(BBG):
 
         # check starting points are legal or it's gonna be a long wait.
         if not self.checkPointInBounds(self.pointA):
-            print "Error Warning: PointA out of bounds"
+            print("Error Warning: PointA out of bounds")
             time.sleep(3)
         
         return BBG.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid)
@@ -119,7 +119,7 @@ class RandomPolymerPackBBG(BBG):
         return [self.particleName] * self.numPoints
 
     def checkBondLengths(self):
-        print [ np.linalg.norm(self.buildingBlockXYZ[i] - self.buildingBlockXYZ[i-1]) for i in range(1, len(self.buildingBlockXYZ)) ]       
+        print([ np.linalg.norm(self.buildingBlockXYZ[i] - self.buildingBlockXYZ[i-1]) for i in range(1, len(self.buildingBlockXYZ)) ] )       
         
     def generateAllowedList(self):
         # increase probability of selecting points lower down the list
@@ -140,7 +140,7 @@ class RandomPolymerPackBBG(BBG):
         if self.dumpInterimFiles==1:
             fIO.saveXYZList(xyzVals, self.blockNames, 'initialChain.xyz')
 
-        #print "Ensuring structure is inside envelope"
+        #print("Ensuring structure is inside envelope")
         xyzVals = self.foldInsideEnvelope(xyzVals)
 
         if self.dumpInterimFiles==1:
@@ -199,7 +199,7 @@ class RandomPolymerPackBBG(BBG):
             try:
                 atom2 = xyzVals[axisAtom1Index + 1]
             except IndexError:
-                print "Index Error"
+                print("Index Error")
             rotAxis = atom2 - atom1
             rotAxisHat = rotAxis/np.linalg.norm(rotAxis)
             
@@ -261,7 +261,7 @@ class RandomPolymerPackBBG(BBG):
                 
                 
                 if self.verbose==1:
-                    print "step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside
+                    print("step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside)
                  
             # if the new move means that the num indices outside has gone up above the curXYZVals then 
             # roll the die to decide whether or not to replace the curXYZVals
@@ -275,10 +275,10 @@ class RandomPolymerPackBBG(BBG):
             numMoves += 1
 
             if numMoves % 10==0 and self.verbose==1:                 
-                print "step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside
+                print("step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside)
         
         if minNumIndicesOutside > 0:
-            print "Warning: there are points outside the envelope that were not moved inside."
+            print("Warning: there are points outside the envelope that were not moved inside.")
             if self.dumpInterimFiles:
                 xyzVals = [ minXYZVals[index] for index in minIndices]
                 fIO.saveXYZ(xyzVals, 'B', 'outsideEnvelope.xyz')
@@ -338,4 +338,4 @@ if __name__ == '__main__':
                                                                      envelopeList=envelopeList,
                                                                      visualiseEnvelope=(100000, 100))
     RandomPolymerPackBB .exportBBK(fIO.fileRootFromInfile(filename, 'txt'))
-    print "RandomPolymer Done"
+    print("RandomPolymer Done")

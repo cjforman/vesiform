@@ -23,7 +23,7 @@ class SurfacePackCylinderBBG(NBB):
         NBB.initialiseParameters(self) 
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for Cylinder Packing"
+            print("Critical Parameters are undefined for Cylinder Packing")
             sys.exit()        
 
     def generateBuildingBlock( self, 

@@ -36,7 +36,7 @@ def makeBlockCopolymer(numA, numB, Z1_A, R1_A, Z2_A, R2_A, alpha1A, alpha2A, bet
         if RandomPolymer_A.blockXYZVals[0][2] < RandomPolymer_A.blockXYZVals[-1][2]:
             rejectPolymer = False
         else:
-            print "Polymer Rejected"
+            print("Polymer Rejected")
 
 
 
@@ -99,4 +99,4 @@ if __name__=="__main__":
         fIO.saveXYZList(xyzVals, names, "blockCopolymer_" + str(i) + ".xyz")
 
 
-    print "example done"
+    print("example done")

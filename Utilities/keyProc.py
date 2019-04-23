@@ -4,7 +4,7 @@ Created on 14 Dec 2017
 @author: chris
 '''
 import sys
-from fileIO import readTextFile
+from .fileIO import readTextFile
 
 class keyProc():
     ''' Class constructs a dictionary called params which stores values from a text based parameter list consisting of lines in the format of:
@@ -40,7 +40,7 @@ class keyProc():
         if self.noLoadErrors==True:
             pass#print "Parameters loaded and initialised successfully"
         else:
-            print "Error loading parameters"
+            print("Error loading parameters")
             self.dumpParams()
             sys.exit()
     
@@ -116,7 +116,7 @@ class keyProc():
                             self.params[tokens[1]] = []
                             self.params[tokens[1]].append( tuple(float(token) for token in tokens[2:]) )
                 except IndexError:
-                    print "Ignoring Stray Line With Nothing In It"
+                    print("Ignoring Stray Line With Nothing In It")
                          
         return noErrors
     

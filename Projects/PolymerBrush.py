@@ -186,4 +186,4 @@ if __name__=="__main__":
     (brushDir, brushPoint, xyz, names) = polymerBrush(brushDict)
     fIO.saveXYZList(xyz, names, "brush.xyz")
 
-    print "example done"
+    print("example done")

@@ -26,7 +26,7 @@ class SurfacePackSphereBBG(NBB):
         NBB.initialiseParameters(self) 
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for SpherePack Object"
+            print("Critical Parameters are undefined for SpherePack Object")
             sys.exit()        
 
     def generateBuildingBlock(self, numPoints, radius, theta1, theta2, phi1, phi2, minDist, envelopeList=['None'], pointsToAvoid=[], showBlockDirector=False, visualiseEnvelope=(0,200)):
@@ -145,4 +145,4 @@ if __name__ == '__main__':
     
     
     
-    print "Sphere Pack Done"
+    print("Sphere Pack Done")

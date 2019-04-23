@@ -4,7 +4,7 @@ Created on 14 Dec 2017
 @author: chris forman
 '''
 import numpy as np
-import coordSystems as coords
+import Utilities.coordSystems as coords
 
 # ***** cartesian vector geometry functions ******
 def AlignTwoBlocksOfVectors(BlockOne, BlockTwo):
@@ -117,7 +117,7 @@ def rotPAboutAxisAtPoint(p, p0, n, angle):
             r_Rot = r*np.cos(angle) + np.cross(nHat, r)*np.sin(angle) + nHat*np.dot(nHat, r)*(1- np.cos(angle))
             outVec = r_Rot + p0
         except ValueError:
-            print "valueError"
+            print("valueError")
             outVec = p
     else:
         outVec = p
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     
     listOfVectors = [ np.array([1.0, 1.0, 0.0]), np.array([-1.0, -1.0, 0.0]), np.array([-1.0, 1.0, 0.0]), np.array([1.0, -1.0, 0.0])]
     pAxis = getPrincipalAxis(listOfVectors)
-    print pAxis
+    print(pAxis)
     
     
     p1 = np.array([-10.0, 0.0, 0.0])
@@ -221,5 +221,5 @@ if __name__ == "__main__":
     q2 = np.array([ 0.0, -1.0, 2.0])
     
     d = closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2)
-    print d
+    print(d)
      

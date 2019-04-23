@@ -47,14 +47,14 @@ class BuildingBlock():
         self.blockRotation = 0
       
         if len(blockXYZVals)!=len(blockAtomNames):
-            print "Building Block Error: Number of building block atom names must match number of atom vectors."
+            print("Building Block Error: Number of building block atom names must match number of atom vectors.")
         
         if False in [len(vec)==3 for vec in blockXYZVals]:
-            print "Warning: Building Block Error: All xyz vals must be 3 values long."
+            print("Warning: Building Block Error: All xyz vals must be 3 values long.")
 
         if len(blockConnectors)>1:
             if False in [len(vec)==3 for vec in blockConnectors]:
-                print "Warning: Building Block Error: All connectors must be 3 indices long."
+                print("Warning: Building Block Error: All connectors must be 3 indices long.")
 
     def append(self, BB):
         # simple add function for adding data from another building block to this one. Just copies 
@@ -431,8 +431,8 @@ if __name__=="__main__":
     sConnectorIndices = helix1.getConnectionIndices(sConnectionIndex)
     mConnectorIndices = [ ci + helix1.countAtoms() for ci in helix2.getConnectionIndices(mConnectionIndex)] 
      
-    print "dead static connector: ", sConnectorIndices
-    print "dead mobile connector: ", mConnectorIndices
+    print("dead static connector: ", sConnectorIndices)
+    print("dead mobile connector: ", mConnectorIndices)
      
     sXYZBB = [ XYZBB[index] for index in sConnectorIndices ]
     mXYZBB = [ XYZBB[index] for index in mConnectorIndices ]
@@ -455,9 +455,9 @@ if __name__=="__main__":
     alpha3SB = coord.Dihedral(sXYZSB[2], mXYZSB[2], mXYZSB[1], mXYZSB[0]) * 180 / np.pi
     displacementSB = np.linalg.norm(mXYZSB[2]- sXYZSB[2])
     
-    print "input : ", alpha1Inp, beta1Inp, alpha2Inp, beta2Inp, alpha3Inp, displacementInp
-    print "new BB: ", alpha1BB, beta1BB, alpha2BB, beta2BB, alpha3BB, displacementBB
-    print "new SB: ", alpha1SB, beta1SB, alpha2SB, beta2SB, alpha3SB, displacementSB
+    print("input : ", alpha1Inp, beta1Inp, alpha2Inp, beta2Inp, alpha3Inp, displacementInp)
+    print("new BB: ", alpha1BB, beta1BB, alpha2BB, beta2BB, alpha3BB, displacementBB)
+    print("new SB: ", alpha1SB, beta1SB, alpha2SB, beta2SB, alpha3SB, displacementSB)
     
     
-    print "done"
+    print("done")

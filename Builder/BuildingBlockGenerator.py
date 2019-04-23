@@ -6,7 +6,7 @@ import Utilities.fileIO as fIO
 
 import numpy as np
 import random as rnd
-from BuildingBlock import BuildingBlock 
+from Builder.BuildingBlock import BuildingBlock 
 
 class BuildingBlockGenerator(keyProc):
     # This is the class definition for the base building block generator.
@@ -43,7 +43,7 @@ class BuildingBlockGenerator(keyProc):
         self.dumpInterimFiles = self.getParam('dumpInterimFiles')
 
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for BuildingBlockGenerator"
+            print("Critical Parameters are undefined for BuildingBlockGenerator")
             sys.exit()        
 
     def generateBuildingBlock(self, numPoints, minDist, showBlockDirector=False, visualiseEnvelope=(0, 20, 'envelope.xyz'), envelopeList=['None'], pointsToAvoid=[], defaultBlockRefPoint=None):
@@ -64,12 +64,15 @@ class BuildingBlockGenerator(keyProc):
 
         # visualise envelope if requested
         if visualiseEnvelope[0]>0:
-            print "Visualising envelope"
+            print("Visualising envelope")
             self.visualiseEnvelope(visualiseEnvelope[0], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[2])
 
-        # from the points to avoid list only remember those that would pass the specified envelope test
+        # from the points to avoid list remove those points that would fail the envelope test
         self.pointsToAvoid =[]
-        self.pointsToAvoid = [ pointsToAvoid[index] for index in range(len(pointsToAvoid)) if not index in self.checkAllPointsInBounds(pointsToAvoid) ]
+        indicesOfPointsToRemoveFromPointsToAvoid = self.checkAllPointsInBounds(pointsToAvoid)
+        if len(indicesOfPointsToRemoveFromPointsToAvoid)>0:
+            self.pointsToAvoid = [ pointsToAvoid[index] for index in range(0, len(pointsToAvoid)) if not index in indicesOfPointsToRemoveFromPointsToAvoid]
+                
 
         # save the pointsToAvoid if we're dumping files
         if self.dumpInterimFiles==1:
@@ -162,7 +165,7 @@ class BuildingBlockGenerator(keyProc):
                 if np.linalg.norm(pta - pos) < self.minDist:
                     inBounds = False
                     if self.verbose==1:
-                        print "pointsToAvoid Violation"
+                        print("pointsToAvoid Violation")
                     break
         
         # Now perform envelop processing.
@@ -181,7 +184,7 @@ class BuildingBlockGenerator(keyProc):
                 inBounds = True
                 if np.linalg.norm( pos - self.blockRefPoint) > envelopeParams[0]:
                     if self.verbose==1:
-                        print "outerSphere Violation"
+                        print("outerSphere Violation")
                     inBounds=False
             except KeyError:
                 pass
@@ -194,7 +197,7 @@ class BuildingBlockGenerator(keyProc):
                 inBounds = True
                 if np.linalg.norm(pos - self.blockRefPoint) < envelopeParams[0]:
                     if self.verbose==1:
-                        print "innerSphere Violation"
+                        print("innerSphere Violation")
                     inBounds=False
             except KeyError:
                 pass
@@ -222,21 +225,21 @@ class BuildingBlockGenerator(keyProc):
                 if inside >= 0:
                     if xyzSpherical[1] < thetaMin or xyzSpherical[1] > thetaMax:
                         if self.verbose==1:
-                            print "Spherical Wedge Violation"
+                            print("Spherical Wedge Violation")
                         inBounds=False
                     if xyzSpherical[2] < phiMin or xyzSpherical[2] > phiMax:
                         if self.verbose==1:
-                            print "Spherical Wedge Violation"
+                            print("Spherical Wedge Violation")
                         inBounds=False
 
                 if inside < 0:
                     if xyzSpherical[1] > thetaMin and xyzSpherical[1] < thetaMax:
                         if self.verbose==1:
-                            print "Spherical Wedge Violation"
+                            print("Spherical Wedge Violation")
                         inBounds=False
                     if xyzSpherical[2] > phiMin and xyzSpherical[2] < phiMax:
                         if self.verbose==1:
-                            print "Spherical Wedge Violation"
+                            print("Spherical Wedge Violation")
                         inBounds=False
                     
             except KeyError:
@@ -267,13 +270,13 @@ class BuildingBlockGenerator(keyProc):
                 if  zComponent > ZMax or zComponent < ZMin:
                     inBounds = False
                     if self.verbose==1:
-                        print "frustum Z Violation"
+                        print("frustum Z Violation")
 
                 
                 if r > coords.FrustumRadiusAtGivenZ(zComponent, Z1, Z2, Radius1, Radius2):
                     inBounds = False
                     if self.verbose==1:
-                        print "frustum R Violation" 
+                        print("frustum R Violation") 
             except KeyError:
                 pass
         
@@ -284,7 +287,7 @@ class BuildingBlockGenerator(keyProc):
                 if pos[2]>envelopeParams[0]:
                     inBounds=False
                     if self.verbose==1:
-                        print "halfspace Violation"                    
+                        print("halfspace Violation")                    
             except KeyError:
                 pass
 
@@ -341,7 +344,7 @@ class BuildingBlockGenerator(keyProc):
         n = 0
         for pos in posList:
             if n % 1000==0:
-                print "Visualising Envelope:", str(n), "out of", str(len(posList))
+                print("Visualising Envelope:", str(n), "out of", str(len(posList)))
             if self.checkPointInBounds(pos, ignorePTA=True):
                 posOut.append(pos)
             n += 1
@@ -350,7 +353,7 @@ class BuildingBlockGenerator(keyProc):
         return
     
     def checkAllPointsInBounds(self, xyzVals):
-        ''' Creates a list of all the points in XYZ that failed the spatial tests.'''
+        ''' Creates a list of indices of all the points in XYZ that failed the checkPointInBounds tests.'''
         # set up output arrays        
         pointGood = True
         badPoints = []
@@ -385,4 +388,4 @@ if __name__ == "__main__":
     testBuildBlock.transformBBToLabFrame(director, startPos, rotation) 
     testBuildBlock .exportBBK(fIO.fileRootFromInfile(filename, 'txt'))
     
-    print "building block done"
+    print("building block done")

@@ -33,7 +33,7 @@ class peptideBackboneGenerator(BBG):
         
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for peptide BackboneGenerator"
+            print("Critical Parameters are undefined for peptide BackboneGenerator")
             sys.exit()        
 
     def generateBuildingBlock(self, numResidues, seedResidue = None, showBlockDirector=False, nameCA=False):
@@ -45,7 +45,7 @@ class peptideBackboneGenerator(BBG):
         self.seedResidue = seedResidue
         if not seedResidue==None:
             if not len(seedResidue)==3:
-                print "Warning: Seed residue in peptide backbone generator is not 3 atoms long" 
+                print("Warning: Seed residue in peptide backbone generator is not 3 atoms long") 
         minDistDummy = 1.0
         
         return BBG.generateBuildingBlock(self, self.numPoints, minDistDummy, showBlockDirector=showBlockDirector)
@@ -198,4 +198,4 @@ if __name__ == "__main__":
 
 
     
-    print "backbone done"
+    print("backbone done")

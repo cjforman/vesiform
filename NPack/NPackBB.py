@@ -45,7 +45,7 @@ class NPackBB(BBG):
         self.dumpInterimFiles = self.getParam('dumpInterimFiles')
         self.verbose = self.getParam('verbose')
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for NPack object"
+            print("Critical Parameters are undefined for NPack object")
             sys.exit()
     
     def generateBuildingBlock(self, numPoints, minDist, envelopeList='[None]', pointsToAvoid=[], visualiseEnvelope=(0,200), showBlockDirector=False, defaultBlockRefPoint=None):
@@ -77,7 +77,7 @@ class NPackBB(BBG):
         ''' Returns True if a list of numPoints numpy vectors are randomly found that obey the user supplied conditions. 
         Returns False if the number of attempts to find a list exceeds maxNumAttempts
         '''
-        print "Starting packing process"
+        print("Starting packing process")
         
         # initialise random number generator
         rnd.seed()
@@ -108,9 +108,9 @@ class NPackBB(BBG):
                 processSucceeded = self.attemptToFindNPointsFromCurrentSeed()
             
         if processSucceeded == True:
-            print "Packing Process Successful"
+            print("Packing Process Successful")
         else:
-            print "Process failed maxNumAttempts times. Consider relaxing constraints or increasing maxNumAttempts."
+            print("Process failed maxNumAttempts times. Consider relaxing constraints or increasing maxNumAttempts.")
             
         return processSucceeded
 
@@ -166,14 +166,14 @@ class NPackBB(BBG):
             numOperations += 1
             
             if (numOperations % 100) == 0:
-                print "num Operations: ", numOperations
+                print("num Operations: ", numOperations)
         
             if self.verbose==2:
-                print "current Length: ", len(self.nList), ", numOperations: ", numOperations, ", numTimesPruned: ", numTimesPrunedSinceLastMaxLengthGrowth,  ", nAttempts: ", self.nAttempts
+                print("current Length: ", len(self.nList), ", numOperations: ", numOperations, ", numTimesPruned: ", numTimesPrunedSinceLastMaxLengthGrowth,  ", nAttempts: ", self.nAttempts)
         
             # if we hit the maximum number of operations then bail out the loop
             if numOperations>=self.maxNumOperations:
-                print "Max Number of allowed operations exceeded; current seed has failed."
+                print("Max Number of allowed operations exceeded; current seed has failed.")
                 processFailed = True
         
             if not processFailed:
@@ -203,7 +203,7 @@ class NPackBB(BBG):
                         numTimesPrunedSinceLastMaxLengthGrowth = 0
     
                         # send this rare but informative report to keep user aware that stuff is going on.
-                        print "New Longest Length: ", longestLengthYet, " out of ", self.numPoints
+                        print("New Longest Length: ", longestLengthYet, " out of ", self.numPoints)
                 
                 else: # unable to add a node
                     
@@ -218,7 +218,7 @@ class NPackBB(BBG):
                         
                         if numTimesPrunedSinceLastMaxLengthGrowth>largestPruneBeforeGrowthYet:
                             largestPruneBeforeGrowthYet = numTimesPrunedSinceLastMaxLengthGrowth
-                            print "New Largest Prune: ", largestPruneBeforeGrowthYet, "chop occurs at: ", self.maxNumPrunesBeforeChop, " Num Chops: ", numChops  
+                            print("New Largest Prune: ", largestPruneBeforeGrowthYet, "chop occurs at: ", self.maxNumPrunesBeforeChop, " Num Chops: ", numChops)  
     
                         # if we have successfully pruned the current list without causing new growth for ages then perform a chop.
                         # This has the effect of moving the list a long way in search space 
@@ -229,7 +229,7 @@ class NPackBB(BBG):
                                 numChops += 1
                                 
                                 if numChops>=self.maxNumChops:
-                                    print "Max Num Chops reached. Current Seed has failed."
+                                    print("Max Num Chops reached. Current Seed has failed.")
                                     processFailed = True
     
                                 if not processFailed:
@@ -241,23 +241,23 @@ class NPackBB(BBG):
                                     del self.nAttempts[chopPoint:]
                                     
                                     # send this rare but informative message by way of a heart beat to the user
-                                    print "Num Chops: ", numChops, " out of: ", self.maxNumChops
+                                    print("Num Chops: ", numChops, " out of: ", self.maxNumChops)
                                     
                                     # reset the pruning counters
                                     numTimesPrunedSinceLastMaxLengthGrowth = 0
                                     largestPruneBeforeGrowthYet = 0
     
                             else:
-                                print "Attempt to perform a chop on short list. Current seed has failed."
+                                print("Attempt to perform a chop on short list. Current seed has failed.")
                                 processFailed = True
                     else:
                         # both nodedAdded and nodePruned were False
-                        print "Unable to either add or a prune a node therefore current seed has failed."
+                        print("Unable to either add or a prune a node therefore current seed has failed.")
                         processFailed = True
 
         if processFailed:
-            print "Current Attempt Has failed."
-            print "longest Length Reached: ", longestLengthYet, " number of operations: ", numOperations, " numChops: ", numChops, " highest number of Prunes: ", largestPruneBeforeGrowthYet 
+            print("Current Attempt Has failed.")
+            print("longest Length Reached: ", longestLengthYet, " number of operations: ", numOperations, " numChops: ", numChops, " highest number of Prunes: ", largestPruneBeforeGrowthYet) 
                         
         # need to report success so report inverse of failure
         return not processFailed
@@ -334,7 +334,7 @@ class NPackBB(BBG):
             # if the end point is old then perform pruning operations.
             if self.nAttempts[-1] >= self.maxLivesPerNode:
                 if len(self.nList)==self.numSeedPoints:
-                    print "Attempt to delete the seed points. Current Seed is not viable."
+                    print("Attempt to delete the seed points. Current Seed is not viable.")
                     pruneNodesSuccess = False
                     continueToPrune = False    
                 else:
