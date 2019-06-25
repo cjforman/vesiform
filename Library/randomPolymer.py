@@ -85,7 +85,8 @@ class RandomPolymerPackBBG(BBG):
                                pointsToAvoid=[],
                                visualiseEnvelope=(0, 20, 'envelope.xyz'),
                                envelopeList=["None"],
-                               showBlockDirector=False):
+                               showBlockDirector=False,
+                               SpaceCurveTransform=True):
 
         self.numPoints = numPoints
         self.pointA = pointA
@@ -100,13 +101,14 @@ class RandomPolymerPackBBG(BBG):
         self.beta1 = min(beta1*np.pi/180, beta2*np.pi/180)
         self.beta2 = max(beta1*np.pi/180, beta2*np.pi/180)
         self.pointsToAvoid = pointsToAvoid
+        self.SpaceCurveTransform = SpaceCurveTransform
 
         # check starting points are legal or it's gonna be a long wait.
         if not self.checkPointInBounds(self.pointA):
             print("Error Warning: PointA out of bounds")
             time.sleep(3)
         
-        return BBG.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid)
+        return BBG.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, visualiseEnvelope=visualiseEnvelope, showBlockDirector=showBlockDirector, pointsToAvoid=pointsToAvoid)
 
     def generateBuildingBlockDirector(self):
         director = self.buildingBlockXYZ[-1] - self.buildingBlockXYZ[0]
@@ -138,13 +140,13 @@ class RandomPolymerPackBBG(BBG):
         xyzVals = self.generateSpaceCurve()
         
         if self.dumpInterimFiles==1:
-            fIO.saveXYZList(xyzVals, self.blockNames, 'initialChain.xyz')
+            fIO.saveXYZ(xyzVals, 'Ca', 'initialChain.xyz')
 
         #print("Ensuring structure is inside envelope")
         xyzVals = self.foldInsideEnvelope(xyzVals)
 
         if self.dumpInterimFiles==1:
-            fIO.saveXYZList(xyzVals, self.blockNames, 'foldedChain.xyz')
+            fIO.saveXYZ(xyzVals, 'Fe', 'foldedChain.xyz')
 
         return xyzVals
     
@@ -175,10 +177,13 @@ class RandomPolymerPackBBG(BBG):
             # construct next space curve point 
             spaceCurve.append(spaceCurve[-1] + b * dirn/np.linalg.norm(dirn))
         
-        currentAxis = coords.axisFromHelix(spaceCurve[2:])
-        currentRefPoint = self.pointA
+        # chop the starting points off
+        spaceCurve = spaceCurve[2:]
         
-        spaceCurve = coords.transformFromBlockFrameToLabFrame(self.blockDirectorHat, self.pointA, 0.0, currentAxis, currentRefPoint, spaceCurve[2:])
+        if self.SpaceCurveTransform==True:
+            currentAxis = coords.axisFromHelix(spaceCurve)
+            currentRefPoint = self.pointA
+            spaceCurve = coords.transformFromBlockFrameToLabFrame(self.blockDirectorHat, self.pointA, 0.0, currentAxis, currentRefPoint, spaceCurve)
         
         return spaceCurve
     
@@ -235,7 +240,7 @@ class RandomPolymerPackBBG(BBG):
             
             # if new vals self-intersect then reject it
             for n, pos in enumerate(newXYZVals[0:-1]):
-                goodPos = self.checkPointAgainstList(newXYZVals[n+1:], pos)
+                goodPos = self.checkPointAgainstList(newXYZVals[n + 1:], pos)
                 if goodPos==False:
                     newXYZVals = curXYZVals
                     break
@@ -274,7 +279,7 @@ class RandomPolymerPackBBG(BBG):
             
             numMoves += 1
 
-            if numMoves % 10==0 and self.verbose==1:                 
+            if numMoves % 10==0 and self.verbose==0:                 
                 print("step: ", numMoves, " minNumIndicesOutside: ", minNumIndicesOutside, "curNumIndicesOutside:", curNumIndicesOutside)
         
         if minNumIndicesOutside > 0:

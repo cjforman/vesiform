@@ -26,7 +26,7 @@ class XYZBuildingBlockGenerator(BBG):
         keyProc.initialiseParameters(self)
     
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for XYZBuildingBlockGenerator"
+            print("Critical Parameters are undefined for XYZBuildingBlockGenerator")
             sys.exit()        
 
     def generateBuildingBlock(self, XYZFileName, showBlockDirector=False, visualiseEnvelope=(0,20, 'envelope.xyz'), envelopeList=['None'], pointsToAvoid=[]):
@@ -72,4 +72,4 @@ if __name__ == "__main__":
     xyzBuildingBlock.transformBBToLabFrame(director, refPos, rotation)
     xyzBuildingBlock.exportBBK('XYZFile_out') # adds the xyz extension automatically
     
-    print "xyz building block done"
+    print("xyz building block done")

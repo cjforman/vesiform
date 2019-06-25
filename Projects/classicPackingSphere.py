@@ -76,4 +76,4 @@ for director, pos, strand in zip(directors, Polymer1SpherePoints, polymer1Strand
 fIO.saveXYZList(xyzVals, allNames, "sphere.xyz")
 
 
-print "example done"
+print("example done")

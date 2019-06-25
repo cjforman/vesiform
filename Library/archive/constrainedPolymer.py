@@ -44,7 +44,7 @@ class ConstrainedPolymerPackNBB(NBB):
         self.compressionScaleFactor = self.getParam('compressionScaleFactor')
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for constrained polymer object"
+            print("Critical Parameters are undefined for constrained polymer object")
             sys.exit()
 
     def generateBuildingBlock( self, 

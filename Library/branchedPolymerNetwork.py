@@ -11,6 +11,7 @@ import numpy as np
 import random as rnd
 import copy as cp
 from Utilities import fileIO as fIO
+from Utilities import coordSystems as coords
 import networkx as nx
 
 class BranchedPolymerPackBBG(BBG):
@@ -53,9 +54,14 @@ class BranchedPolymerPackBBG(BBG):
                                z1,
                                z2,
                                networkMinDist,
-                               monmerMinDist,
+                               neighborRadius,
+                               monomerMinDist,
                                bondLength,
                                curlyFactor,
+                               coneAngle,
+                               minAngle,
+                               threshold,
+                               maxNeighbours,
                                angularRange=['None'],
                                pointsToAvoid=[],
                                visualiseEnvelope=(0,20),
@@ -64,6 +70,7 @@ class BranchedPolymerPackBBG(BBG):
         self.numPoints = numPoints
         self.bondLength = float(bondLength)
         self.networkMinDist = networkMinDist
+        self.neighborRadius = neighborRadius
         self.monomerMinDist = monomerMinDist
         self.x1 = x1
         self.x2 = x2
@@ -71,6 +78,10 @@ class BranchedPolymerPackBBG(BBG):
         self.y2 = y2
         self.z1 = z1
         self.z2 = z2
+        self.coneAngle = coneAngle
+        self.minAngle = minAngle
+        self.threshold = threshold
+        self.maxNeighbours = maxNeighbours
         self.curlyFactor = curlyFactor
         self.pointsToAvoid = pointsToAvoid
         self.visualiseEnvelope = visualiseEnvelope
@@ -110,14 +121,27 @@ class BranchedPolymerPackBBG(BBG):
         # generate a random graph of connections between all the points,
         # such that no node has more than 3 connections and every node has at least one edge
         g = self.splitPointsIntoGraphs(points.blockXYZVals)
+        
+        if self.dumpInterimFiles==1:
+            self.visualiseNetwork(g, points.blockXYZVals, self.monomerMinDist)
 
         return self.connectGraphWithConstrainedPolymer(g, points.blockXYZVals)
 
-    # uses the sizeSet information to breaks the points list up
-    # into Ni graphs of size Mi where 0<i<len(sizeSet).
-    # sizeSet is a list of tuples [(N1, M1), (N2, M2)...]
-    # such that Ni is number of graphs of that size and M2 is number of points in that
-    # graph.  
+    def visualiseNetwork(self, g, points, radius):
+        dZ = 0.1 * radius # ten particles per radius 
+        xyzVals = []
+        for edge in g.edges:
+            node1 =  points[edge[0]]
+            node2 =  points[edge[1]]
+            director = node2 - node1
+            length = np.linalg.norm(director)
+            director = director/length
+            numPoints = int(length/dZ)
+            xyzVals += [  node1 + float(zIndex) * dZ * director for zIndex in range(0, numPoints)   ]
+                
+        fIO.saveXYZ(xyzVals, 'P', 'rawNetwork.xyz')        
+
+    
     def splitPointsIntoGraphs(self, points):
         
         # nodes in graph are numbered 0 to numNodes - 1
@@ -131,7 +155,110 @@ class BranchedPolymerPackBBG(BBG):
         for nodeNum in range(0, numNodes):
             g.add_node(nodeNum)
 
-        # Add the edges.
+        params=[self.neighborRadius, self.coneAngle, self.minAngle, self.threshold, self.maxNeighbours]
+
+        # Add the edges and return
+        return self.add_edges(g, points, params, mode="natural")
+    
+    # switcher between edge adding algorithms    
+    def add_edges(self, g, points, params, mode="natural"):
+        
+        if mode=="deterministic":
+            outputGraph = self.add_edges_deterministic(g)
+    
+        if mode=="natural":
+            outputGraph = self.add_edges_natural(g, points, params[0], params[1], params[2], params[3], params[4])
+
+        # find singleton nodes
+        nodesToRemove=[]
+        for node in outputGraph.nodes():
+            if sum(1 for _ in g.neighbors(node))==0:
+                nodesToRemove += [node]
+
+        # remove singleton nodes
+        for node in nodesToRemove:
+            outputGraph.remove_node(node)
+
+        return outputGraph
+
+    # randomly picks two points less than radius apart and uses that as the axis for a cone of interior angle coneangle
+    # Then picks point inside that cone, such that no points subtend an angle less than minAngle.
+    # keep going until threshold percentage of points have at least one edge
+    def add_edges_natural(self, g, points, neighborRadius, coneAngle, minAngle, threshold, maxEdgesPerNode):
+    
+        numPoints = len(points)
+
+        numFreeNodes = self.countFreeNodes(g)
+        minNumFreeNodes = int((1.0 - threshold) * float(numPoints))    
+                
+        while ( numFreeNodes > minNumFreeNodes):  
+
+            # pick a node at random
+            node1 = rnd.randint(0, numPoints-1)
+            
+            # only pick a node if it has less than maxEdgesPerNode
+            if sum(1 for _ in g.neighbors(node1)) < maxEdgesPerNode:
+                
+                # pick a second node at random
+                node2 = rnd.randint(0, numPoints-1)
+                
+                # compute director between vector if node1 and node 2 are not the same node
+                if not node1==node2:
+                    director = points[node2] - points[node1]
+                    length = np.linalg.norm(director)
+                    directorHat = director/length 
+                
+                # only pick second node if it not node 1, has less than maxEdgesPerNode and is within radius of the first node 
+                if (not node1==node2) and (sum(1 for _ in g.neighbors(node2)) < maxEdgesPerNode) and length < neighborRadius:
+                    
+                    # add edge between the two root nodes
+                    g.add_edge(node1, node2)
+
+                    # begin a list of points in the current chain that we are making 
+                    xyzList = [ points[node1], points[node2] ]
+
+                    # generate a list of points that are in the allowed cone                    
+                    coneList = self.pickPointsInCone(points[node1], coneAngle, directorHat, points, xyzList)
+
+                    # loop through the cone list checking each point in order to see
+                    # a) it's less than radius from last point on list
+                    # b) forms an angle greater than minAngle with previous 2 points on list
+                    # c) has less edges than maxEdgesPerNode
+                    lastNode = node2
+                    for node in coneList:
+                        if (np.linalg.norm(points[node] - xyzList[-1]) < neighborRadius ): 
+                            if coords.bondAngle(xyzList[-2], xyzList[-1], points[node]) > minAngle:
+                                if (sum(1 for _ in g.neighbors(node2)) < maxEdgesPerNode):
+                                    g.add_edge(lastNode, node)
+                                    xyzList += points[node]
+                                    lastNode = node
+            numFreeNodes = self.countFreeNodes(g)
+
+        return g
+                    
+    # returns a list of indices of points in pointsList that are within a cone
+    # defined by apex, director and cone angle.
+    # Sorts the list of indices by the distance from the apex point along the cone axis
+    def pickPointsInCone(self, apex, coneAngle, director, pointsList, excludedPoints):
+        indexList = []
+        tanAngle = np.tan(coneAngle/2)
+        for index, point in enumerate(pointsList):
+            
+            if not True in [ np.linalg.norm(point - testPoint)<1e-6 for testPoint in excludedPoints ]: # ignore the two points that were used to define the cone 
+                z = np.dot(point - apex, director)
+                y = np.linalg.norm(point - apex - z*director)
+                if y/z <= tanAngle and z > float(0.0) :
+                    indexList += [(index, z)]
+
+        indexList = sorted(indexList, key=lambda a:a[1])
+        return [ item[0] for item in indexList]
+                    
+            
+    def countFreeNodes(self, g):
+        return sum( 1 for node in g.nodes if sum(1 for _ in g.neighbors(node))==0 )
+ 
+    
+    def add_edges_deterministic(self, g):
         # loop through the nodes once and add one two or 3 edges to the node.
         for node in g.nodes():
             
@@ -281,14 +408,15 @@ if __name__ == '__main__':
    
     # create the generator
     BPPBBG = BranchedPolymerPackBBG('branchedPolymerNetwork.txt')
-    numPoints = 30
+    numPoints = 100
     x1 = -100
     x2 = 100
     y1 = -100
     y2 = 100
-    z1 = -10
-    z2 = 10
-    networkMinDist = 30.0
+    z1 = -100
+    z2 = 100
+    networkMinDist = 15.0
+    neighborRadius = networkMinDist * 5 
     monomerMinDist = 1.0
     bondLength = 2.0
     curlyFactor = 1.4
@@ -298,6 +426,11 @@ if __name__ == '__main__':
     angularRange=[0.0, 10, 165, 175]
     # envelopeList=["outersphere 12.0", "innersphere 10.0"],
     # pointsToAvoid=pointsToAvoid
+    coneAngle = 45 * np.pi/180
+    minAngle = 165 * np.pi/180
+    threshold = 0.7
+    maxNeighbours = 3
+    
         
     # generate a set of points and build a constrained polymer pack network between them
     BranchedPolymerPackBB = BPPBBG.generateBuildingBlock(  numPoints, 
@@ -305,9 +438,14 @@ if __name__ == '__main__':
                                                            y1, y2,
                                                            z1, z2, 
                                                            networkMinDist,
+                                                           neighborRadius,
                                                            monomerMinDist, 
                                                            bondLength,
-                                                           curlyFactor)
+                                                           curlyFactor,
+                                                           coneAngle,
+                                                           minAngle,
+                                                           threshold,
+                                                           maxNeighbours)
 
     fIO.saveXYZ(BranchedPolymerPackBB.blockXYZVals, 'C', "branchedPolymerNetwork.xyz")
     print("branched Polymer Done")

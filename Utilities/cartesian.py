@@ -5,6 +5,7 @@ Created on 14 Dec 2017
 '''
 import numpy as np
 import Utilities.coordSystems as coords
+from numpy import inf
 
 # ***** cartesian vector geometry functions ******
 def AlignTwoBlocksOfVectors(BlockOne, BlockTwo):
@@ -145,7 +146,7 @@ def clamp(val, valMin, valMax):
         retVal = valMax
     return retVal
 
-def closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2):
+def closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2, returnVec=False):
     # finds the square of the distance between the closest points of 
     # approach on two line segments between p1 and q1 and p2 and q2.
     # Works by computing s and t - the displacement parameters along the 
@@ -205,21 +206,57 @@ def closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2):
     c1 = p1 + d1 * s
     c2 = p2 + d2 * t
     
-    return np.dot(c1 - c2, c1 - c2)
+    # optionally output the director between closest points of approach as well as the distance squared depending on the flag
+    director = c1 - c2
+    outVals = np.dot(director, director)
+    if returnVec:
+        outVals = (outVals, c1 - c2) 
+     
+    return outVals
 
+def closestApproachPointToLineSegmentSquared(p1, p2, q2, returnVec=False):
+        return closestApproachTwoLineSegmentsSquared(p1, p1, p2, q2, returnVec=returnVec)
+
+def distanceOfLineToAPlane(linePoint, lineDirector, planePoint, planeDirector):
+    # computes the line parameter on the line where the line intersects a plane. 
+    # Returns np.inf if the line is parallel or embedded within the plane. 
+    # the sign of the displacement is determined by the sense of direction of the lineDirector.
+    
+    # ensure the directors are normalised
+    lineDirector = lineDirector/np.linalg.norm(lineDirector)
+    planeDirector = planeDirector/np.linalg.norm(planeDirector)    
+    
+    nDotD = np.dot(planeDirector, lineDirector)
+    # assume there is no solution to start with
+    outValue = np.inf
+    if np.abs(nDotD) > 1e-6:
+        outValue = (np.dot(planeDirector, planePoint) - np.dot(planeDirector, linePoint))/nDotD
+    return outValue
+    
 if __name__ == "__main__":
     
+#    linePoint = np.array([0.0, 0.0, 0.0])
+#    lineDirector = np.array([0.0, 1.0, 01.0])
+#    planePoint = np.array([1.0, 1.0, 0.0])
+#    planeDirector = np.array([1.0, 1.0, 1.0])
     
-    listOfVectors = [ np.array([1.0, 1.0, 0.0]), np.array([-1.0, -1.0, 0.0]), np.array([-1.0, 1.0, 0.0]), np.array([1.0, -1.0, 0.0])]
-    pAxis = getPrincipalAxis(listOfVectors)
-    print(pAxis)
+#    d = distanceOfLineToAPlane(linePoint, lineDirector, planePoint, planeDirector)
+    
+#    print(d)
     
     
-    p1 = np.array([-10.0, 0.0, 0.0])
-    q1 = np.array([ -1.0, 0.0, 0.0])
-    p2 = np.array([ 0.0, -10.0, 2.0])
-    q2 = np.array([ 0.0, -1.0, 2.0])
     
-    d = closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2)
-    print(d)
-     
+    
+# listOfVectors = [ np.array([1.0, 1.0, 0.0]), np.array([-1.0, -1.0, 0.0]), np.array([-1.0, 1.0, 0.0]), np.array([1.0, -1.0, 0.0])]
+# pAxis = getPrincipalAxis(listOfVectors)
+# print(pAxis)
+ 
+ 
+ p1 = np.array([-0.0, 0.0, 0.0])
+ q1 = np.array([ -0.0, 0.0, 0.0])
+ p2 = np.array([ -5.0, -0.0, 2.0])
+ q2 = np.array([ -0.0, -5.0, 2.0])
+ 
+ d = closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2, returnVec=True)
+ print(d)
+  

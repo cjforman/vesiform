@@ -329,10 +329,10 @@ if __name__=="__main__":
     from Library.SurfacePackSphere import SurfacePackSphereBBG as SPSBBG
     SphereBBG = SPSBBG('SurfacePackSphere.txt')
 
-    numPolymersPerSphere =  185 #430
-    UnimerBaseRadius = 2
+    numPolymersPerSphere =  300 #185 #430
+    UnimerBaseRadius = 1.75
     SphereRadius = 0.15 * (backboneDict1['Z2'] + backboneDict2['Z2'] - backboneDict1['Z1'] - backboneDict2['Z1'])
-    phiMin = -90
+    phiMin = -180
     phiMax = 180    
     thetaMin = -90
     thetaMax = 90

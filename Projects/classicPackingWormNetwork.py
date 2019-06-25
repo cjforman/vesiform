@@ -1,54 +1,91 @@
 import numpy as np
-import random as rnd
 import sys
-import Utilities.cartesian as cart
-from Library.VolumePackCuboid import VolumePackCuboidBBG as VPCBBG
+import networkx as nx
 from Library.SurfacePackCylinder import SurfacePackCylinderBBG as SPCBBG
 from Library.SurfacePackSphere import SurfacePackSphereBBG as SPSBBG
+from Library.branchedPolymerNetwork2 import BranchedPolymerPackBBG as BPPBBG
+from Library.PackNetwork import PackNetworkBBG as PNBBG
 import Utilities.fileIO as fIO
+ 
 
-def makeWormNetwork(numNodesInit, nodeDist, xSize, ySize, zSize, WormRadius, MaxTubeLength, MaxNumAttempts, ValidNodesPerCluster, minDist):
+def makeWormNetwork(numGen1Worms, 
+                    xSize, ySize, zSize, 
+                    alpha1, alpha2, beta1, beta2, 
+                    wormRadius, backboneSegmentLength, unimerMinDist, packingFraction,
+                    minSegmentsPerWorm, coneAngleWorm, wormDirector, wormAlignmentAngularRange, 
+                    numWormGenerations, minBranchAngle, wormBranchDensity, maxNumAttempts,
+                    selfAvoid=False, pointsToAvoid=[], visualiseEnvelope=(0,20,'envelope.xyz'), envelopeList=["None"]):
 
-    VolumeBBG = VPCBBG('VolumePackCuboid.txt')
-  
-    # generate the XYZVals of the network nodes packed in the volume
-    NetworkNodesXYZ = VolumeBBG(numNodesInit, -xSize/2, xSize/2, -ySize/2, ySize/2, -zSize/2, zSize/2, nodeDist)
+    # create the work network generator
+    wormNetworkBackboneBBG = BPPBBG('branchedPolymerNetwork.txt')
+    packNetworkBBG = PNBBG('packnetwork.txt')
         
-    # create a list of groups of indices which together form a good network
-    ListOfNetworkGroups = groupNodesInNetwork(NetworkNodesXYZ, WormRadius, MaxTubeLength, ValidNodesPerCluster, MaxNumAttempts)
+    # generate a set of points and create a random polymer pack network in a region of space
+    BranchedPolymerPackBB, networkGraph = wormNetworkBackboneBBG.generateBuildingBlock(  numGen1Worms, 
+                                                                               -xSize/2, xSize/2,
+                                                                               -ySize/2, ySize/2,
+                                                                               -zSize/2, zSize/2, 
+                                                                               2 * wormRadius,
+                                                                               alpha1, alpha2,
+                                                                               beta1, beta2,
+                                                                               0.9 * backboneSegmentLength, 
+                                                                               backboneSegmentLength,
+                                                                               minSegmentsPerWorm,
+                                                                               maxNumAttempts,
+                                                                               selfAvoid,
+                                                                               coneAngleWorm, 
+                                                                               wormAlignmentAngularRange,
+                                                                               wormDirector, 
+                                                                               numWormGenerations, 
+                                                                               wormBranchDensity,
+                                                                               minBranchAngle, 
+                                                                               visualiseEnvelope=visualiseEnvelope,
+                                                                               pointsToAvoid=pointsToAvoid,
+                                                                               envelopeList=envelopeList,
+                                                                               SpaceCurveTransform=False)
 
-    # for each cluster in the network generate a series of points and directors 
-    return populateClusters(ListOfNetworkGroups, NetworkNodesXYZ, MaxTubeLength, minDist)
-
-def populateClusters(clusterIndexList, spherePoints, radius, minDist, numPointsSpheres, numPointsClusters):
-    # take the list of clusters and generate a series of unimer base points and directors 
-    # across the surface of all the clusters in the network
-    clusterXYZ = []
-    for cluster in clusterIndexList:
-        clusterPoints = [ spherePoints[index] for index in cluster]
-        if not clusterXYZ:
-            clusterXYZ = [ makeCluster(clusterPoints, radius, minDist, numPointsSpheres, numPointsClusters) ]
-        else:
-            clusterXYZ.append(makeCluster(clusterPoints, spherePoints, radius, minDist, numPointsSpheres, numPointsClusters))
+    fIO.saveXYZ(BranchedPolymerPackBB.blockXYZVals, 'C', "wormBackBoneNetwork.xyz")
     
-    return clusterXYZ
+    # takes the graph of the network and the set of points to which the graph refers (the node names in the graph
+    # are indices in the point list) and returns a set of xyzPoints and directors that populate the surface
+    # of a cylindrical tube a distance worm radius from the backdone described by each individual cluster in the network.
+    # the density of the xyzPoints are defined by unimerMinDist
+    return populateClusters(networkGraph, BranchedPolymerPackBB.blockXYZVals, wormRadius, unimerMinDist, packingFraction)
+    
+def populateClusters(graph, points, radius, minDist, packingFraction):
+    # analyse the graph and create a list of individual subgraphs which are connected.
+    clusters = [graph.subgraph(c) for c in nx.connected_components(graph) ]
+    
+    # for each disjoint subgraph in the graph (a cluster) generate a series of unimer base 
+    # points and directors across the surface of that cluster.
+    clusterXYZ = []
+    clusterDirectors = []
+    for clusterNum, cluster in enumerate(clusters):
+        print("Processing Cluster:", clusterNum + 1, " of ", len(clusters))
+        # make cluster returns a tuple of points and directors that surround the cluster
+        clusterInfo = makeCluster(cluster, points, radius, minDist, packingFraction)
+        clusterXYZ += clusterInfo[0]
+        clusterDirectors += clusterInfo[1]
+        
+    return clusterXYZ, clusterDirectors
 
 # Generates an array of points, and surface normal directors for each point, which are on the surface 
 # of a complex constructions of spheres and cylinders which form a connected worm like
 # network. 
-
-
-# The wormlike network is defined by a list of nodes which are the centres of spheres of
-# a given radius. The node in the list is the root node and all the other nodes
-# in the list are connected by a cylinder of the same given radius.
 #
-# A list of random points is generated across the segmented surface—defined by the union of the spheres around each node
-# and the connecting cylinders—with a uniform surface density (defined by minDist).  
+# The wormlike network is defined by a graph. The nodes in the graph refer to indices in the list of points 
+# which are the centres of spheres of a given radius. The edges in the graph refer to cylinders of the same radius 
+# connecting the nodes. 
+#
+# A list of random points and directors are generated for each sphere and cylinder. 
+# Any points which are within the boundary defined by the union of the spheres and cylinders are deleted. 
+# This is achieved by performing a pair wise analysis of each of the individual sphere and cylinders. 
+# the points packed onto the surfaces are of uniform density defined by minDist.   
 # All points on individual surfaces which are inside the composite surface are removed.
 # 
 # The Output is a flat list of points and their corresponding directors which define the wormlike network 
 #
-def makeCluster(nodes, radius, minDist, packingFraction):
+def makeCluster(cluster, points, radius, minDist, packingFraction):
     CylinderBBG = SPCBBG('SurfacePackCylinder.txt')
     SphereBBG = SPSBBG('SurfacePackSphere.txt')
     
@@ -62,44 +99,42 @@ def makeCluster(nodes, radius, minDist, packingFraction):
     # the np.pi's cancel out
     nCUnit_float = packingFraction * radius**2 / minDist**2
 
-    # set the root point of the cluster
-    rootPoint = nodes[0]
-    
-    # populate each sphere with specified number of points minDist apart
-    spheres = [ SphereBBG(nS, radius, -90.0, 90.0, -180.0, 180.0, minDist) for _ in range(0,len(nodes)) ] 
+    # for each node in the graph generate a sphere of nS points of radius radius and density minDist 
+    #spheres = [ SphereBBG.generateBuildingBlock(nS, radius, -90.0, 90.0, -180.0, 180.0, minDist) for _ in cluster ] 
     
     # compute an array of the sphere directors. Each sphere centred at origin so each pos is its own radial vector.
     # just normalise it and return in seperate array.
-    sphereDirectors = [ [ pos/np.linalg.norm(pos) for pos in sphere.blockXYZVals] for sphere in spheres ]
+    #sphereDirectors = [ [ pos/np.linalg.norm(pos) for pos in sphere.blockXYZVals] for sphere in spheres ]
 
     # translate the sphere points so the centre of each sphere is at the given node.
     # Return an array the same shape as the director array for each point
-    sphereXYZPoints = [ [nodes[index] + pos for pos in sphere.blockXYZVals] for index, sphere in enumerate(spheres)]
+    #sphereXYZPoints = [ [points[node] + pos for pos in sphere.blockXYZVals] for node, sphere in zip(cluster, spheres) ]
     
-    # define the length of each cylinder in the cluster    
-    cylinderLengths = [ np.linalg.norm(rootPoint - node) for node in nodes[1:] ]
+    # define the length of each cylinder in the cluster - one for each edge in the graph
+    cylinderLengths = [ np.linalg.norm(points[edge[1]] - points[edge[0]]) for edge in cluster.edges ]
 
-    # define the axial orientation of each cylinder as the unit vector from the rootPoint to the outer node
-    cylinderAxes = [ (node - rootPoint)/length for node, length in zip(nodes[1:], cylinderLengths) ]
+    # define the unit vector between each connected pairs of nodes
+    cylinderAxes = [ (points[edge[1]] - points[edge[0]])/length for edge, length in zip(cluster.edges, cylinderLengths) ]
 
     # populate each cylinder with a specified number of points no less than minDist apart    
-    cylinders = [ CylinderBBG(int(length * nCUnit_float), radius, radius, 0, length, -180.0, 180.0, minDist) for length in cylinderLengths ]
+    cylinders = [ CylinderBBG.generateBuildingBlock(int(length * nCUnit_float), radius, radius, 0, length, -180.0, 180.0, minDist) for length in cylinderLengths ]
     
-    # transform the cylinder points so the cylinder axis is aligned with the director away from the central node to the outer node 
-    [ cylinderBB.transformBBToLabFrame(director, rootPoint, 0.0) for cylinderBB, director in zip(cylinders, cylinderAxes)]
+    # transform the cylinder points so the cylinder axis is aligned with the director and placed at the first node in the edge.  
+    [ cylinderBB.transformBBToLabFrame(director, points[edge[0]], 0.0) for cylinderBB, director, edge in zip(cylinders, cylinderAxes, cluster.edges)]
     
     # extract the cylinder points from the building block object
     cylinderXYZPoints = [ cylinderBB.blockXYZVals for  cylinderBB in cylinders]
     
     # compute the director of each point (radial vector pointing away from the cylinder axis (rodrigues formula) (see page 183 in book 5).
-    cylinderDirectors = [  [pos - rootPoint - np.dot(director, pos - rootPoint) * director for pos in cylinder] for cylinder, director in zip(cylinderXYZPoints, cylinderAxes) ]
+    cylinderDirectors = [  [pos - points[edge[0]] - np.dot(director, pos - points[edge[0]]) * director for pos in cylinder] for cylinder, director, edge in zip(cylinderXYZPoints, cylinderAxes, cluster.edges) ]
     
     # normalise the directors
     cylinderDirectors = [  [pos/np.linalg.norm(pos) for pos in cylinder] for cylinder in cylinderDirectors ]
     
     # For each list of points that we have constructed (spheres and cylinders) 
-    # go through and remove any of those points that are *inside* the cylindrical shells.
-    # None of the spheres would have other sphere points or cylinder point inside them so no need to check them.
+    # go through and remove any of those points that are inside the *cylindrical* shells.
+    # None of the spheres would ever have other sphere points or cylinder points inside them so no need to check them.
+    # The cylinders dock around the spheres tangentially. 
     
     # first deal with the points belonging to the cylindrical surfaces
     
@@ -110,12 +145,12 @@ def makeCluster(nodes, radius, minDist, packingFraction):
     for indexInner, cylinderPoints in enumerate(cylinderXYZPoints):
         
         # loop through the geometric regions
-        for director, length, indexOuter in zip(cylinderAxes, cylinderLengths, range(0, len(cylinderLengths))):
+        for director, length, indexOuter, edge in zip(cylinderAxes, cylinderLengths, range(0, len(cylinderLengths)), cluster.edges):
             # don't check a cylinder against itself
             if indexInner!=indexOuter:
                 # test the current list of points against the cylinder
                 # Set flags in the flag array for points that need to be removed   
-                FlagPointsInsideCylinder(cylinderPointFlagsList[indexInner], cylinderPoints, rootPoint, director, length, radius)
+                FlagPointsInsideCylinder(cylinderPointFlagsList[indexInner], cylinderPoints, points[edge[0]], director, length, radius)
 
     # apply the flags
     cylinderXYZPoints = [ [point for point, flag in zip(pointList, cylinderPointFlagsList[index]) if flag==True] for index, pointList in enumerate(cylinderXYZPoints)]
@@ -126,22 +161,22 @@ def makeCluster(nodes, radius, minDist, packingFraction):
     # do the same for the sphere points
     
     # assume that all the points will survive - set up a flag array for each point that is same dims as director and points array
-    spherePointFlagsList = [ len(spherePoints) * [True] for spherePoints in sphereXYZPoints  ]
+    #spherePointFlagsList = [ len(spherePoints) * [True] for spherePoints in sphereXYZPoints  ]
  
     # loop through the sets of points for each sphere
-    for indexInner, spherePoints in enumerate(sphereXYZPoints):
+    #for indexInner, spherePoints in enumerate(sphereXYZPoints):
                 
         # loop through the geometric regions
-        for director, length in zip(cylinderAxes, cylinderLengths):
+        #for director, length, edge in zip(cylinderAxes, cylinderLengths, cluster.edges):
             # test the current list of points against the cylinder 
             # set flags in the flag array for points that need to be removed   
-            FlagPointsInsideCylinder(spherePointFlagsList[indexInner], spherePoints, rootPoint, director, length, radius)
+           # FlagPointsInsideCylinder(spherePointFlagsList[indexInner], spherePoints, points[edge[0]], director, length, radius)
  
     # apply the flags
-    sphereXYZPoints = [ [point for point, flag in zip(pointList, spherePointFlagsList[index]) if flag==True] for index, pointList in enumerate(sphereXYZPoints)]
-    sphereDirectors = [ [director for director, flag in zip(directorList, spherePointFlagsList[index]) if flag==True] for index, directorList in enumerate(sphereDirectors)]
+    #sphereXYZPoints = [ [point for point, flag in zip(pointList, spherePointFlagsList[index]) if flag==True] for index, pointList in enumerate(sphereXYZPoints)]
+    #sphereDirectors = [ [director for director, flag in zip(directorList, spherePointFlagsList[index]) if flag==True] for index, directorList in enumerate(sphereDirectors)]
     # reconstruct the flag list as all true
-    spherePointFlagsList = [ len(spherePoints) * [True] for spherePoints in sphereXYZPoints  ]
+   # spherePointFlagsList = [ len(spherePoints) * [True] for spherePoints in sphereXYZPoints  ]
 
     # now flag any points in the cylinders that are within minDist of the remaining points of the other cylinders. 
     # Don't check a cylinder against a cylinder that has already been checked.
@@ -150,17 +185,17 @@ def makeCluster(nodes, radius, minDist, packingFraction):
             FlagPointsTooClose(cylinderPointFlagsList[indexTestSet], testPoints, refPoints, minDist)
 
     # now flag any points in the *cylinders* that are within minDist of the remaining points of their end spheres 
-    for indexTestSet, testPoints in enumerate(cylinderXYZPoints): 
-        for refPoints in np.concatenate((sphereXYZPoints[0], sphereXYZPoints[indexTestSet + 1]), 0):
-            FlagPointsTooClose(cylinderPointFlagsList[indexTestSet], testPoints, refPoints, minDist)
+    #for indexTestSet, testPoints in enumerate(cylinderXYZPoints): 
+    #    for refPoints in np.concatenate((sphereXYZPoints[0], sphereXYZPoints[indexTestSet + 1]), 0):
+     #       FlagPointsTooClose(cylinderPointFlagsList[indexTestSet], testPoints, refPoints, minDist)
 
     # apply the flags to the cylinders
-    cylinderXYZPoints = [ [point for point, flag in zip(pointList, cylinderPointFlagsList[index]) if flag==True] for index, pointList in enumerate(cylinderXYZPoints)]
-    cylinderDirectors = [ [director for director, flag in zip(directorList, cylinderPointFlagsList[index]) if flag==True] for index, directorList in enumerate(cylinderDirectors)]
+    #cylinderXYZPoints = [ [point for point, flag in zip(pointList, cylinderPointFlagsList[index]) if flag==True] for index, pointList in enumerate(cylinderXYZPoints)]
+    #cylinderDirectors = [ [director for director, flag in zip(directorList, cylinderPointFlagsList[index]) if flag==True] for index, directorList in enumerate(cylinderDirectors)]
     
     # add the cylinderPoints to the Sphere Points
-    allPoints = np.concatenate( (cylinderXYZPoints, sphereXYZPoints), 0)
-    allDirectors = np.concatenate( (cylinderDirectors, sphereDirectors), 0)
+    allPoints = cylinderXYZPoints #+ sphereXYZPoints
+    allDirectors = cylinderDirectors #+ sphereDirectors
     
     # Return the flattened lists of points and directors, which by some minor miracle, should all correspond to each other
     return ([ point for minorList in allPoints for point in minorList], [ point for minorList in allDirectors for point in minorList]) 
@@ -196,132 +231,15 @@ def FlagPointsInsideCylinder(FlagList, pointList, basePoint, axis, length, radiu
             zComponent = np.dot(axis, point - basePoint)
             
             # if z component is greater than zero or less than length it could be inside the cylinder
-            # do the epsilon thing for rounding errors etc. assume anything within 1e-6 is actually same value 
-            if zComponent > 1.0e-6 or zComponent <  length - 1.0e-6 :
+            # do the epsilon thing for rounding errors etc. assume anything within 1e-10 is actually same value 
+            if zComponent > 1.0e-10 or zComponent <  length - 1.0e-10 :
                 # only check radial component if z component doesn't rule it out
-                if np.linalg.norm( point - basePoint - zComponent * axis ) - radius < -1.0e-6:
+                if np.linalg.norm( point - basePoint - zComponent * axis ) < 0.9 * radius:
                     # if radial component is also smaller than radius then point is inside cylinder so flag it for removal 
                     FlagList[index]=False
     else:
         print("Flag list of unequal length to point list in FlagPointsInsideCylinder")
         sys.exit()
-
-
-def groupNodesInNetwork(xyzList, tubeRadius, maxTubeLength, validClusterLengths, numAttempts):
-
-    # generate outlist
-    outList = []
-    rootNodesRemaining = [ i for i in range(0, len(xyzList))]
-    branchNodesRemaining = [ i for i in range(0, len(xyzList))]
-    numLoopsWithoutANewCluster = 0
-
-    # keep looping until we stop finding clusters. 
-    # This will be a bit hit and miss what a good threshold is. but we don't care that
-    # much as long as we get a decent number of valid clusters.
-     
-    while numLoopsWithoutANewCluster < numAttempts:
-        # pick a point at random in the root nodes list
-        rootNodeIndex = rootNodesRemaining[rnd.uniform(0, len(rootNodesRemaining))]
-        
-        # choose cluster length randomly from list of valid cluster length 
-        numNodes = validClusterLengths[rnd.uniform(0, len(validClusterLengths))]
-        
-        # create a test node. Makes sure all the points are within maxTubeLength of index node
-        testCluster = pickTestCluster(rootNodeIndex, branchNodesRemaining, xyzList, maxTubeLength, numNodes)
-
-        # check to see if we found enough branch nodes to make a valid cluster
-        if len(testCluster) in validClusterLengths: 
-            # we produced a long enough cluster, does it intersect 
-            # existing clusters. 
-            if checkTestClusterAgainstList(testCluster, outList, xyzList, tubeRadius):
-                # cluster does not intersect existing clusters so we found a good one.
-                # add list of indices forming the cluster to the output list
-                outList.append(testCluster)
-                
-                # remove root node from the root node list
-                rootNodesRemaining.remove(rootNodeIndex)
-                
-                # remove each node index (including root node) 
-                # from the possible branche nodes list
-                for index in testCluster:
-                    branchNodesRemaining.remove(index)
-                
-                # reset the counter
-                numLoopsWithoutANewCluster = 0
-        else:
-            # the randomly chosen node will never make a good root 
-            # (not enough branch nodes within appropriate distance)
-            # so remove it from the remaininRootNodeList.
-            # but it could still be a useful branch
-            rootNodesRemaining.remove(rootNodeIndex)
-
-        numLoopsWithoutANewCluster += 1
-        
-    return outList
-
-def checkTestClusterAgainstList(testCluster, outList, xyzList, tubeRadius):
-    # assume success
-    retVal = True
-     
-    # loop through all the clusters in the list
-    for cluster in outList:
-        # check to see if the current cluster intersects anywhere with the new cluster
-        retVal = doClustersIntersect(testCluster, cluster, xyzList, tubeRadius)
-        
-        # if it does then break 
-        if retVal==False:
-            break
-    
-    return retVal
-    
-def doClustersIntersect(cluster1, cluster2, xyzList, radius):
-
-    # assume success
-    goodCluster = True
-    
-    # first point in each cluster is common to all tubes in the cluster
-    p1 = xyzList[cluster1[0]]
-    p2 = xyzList[cluster2[0]]
-
-    # loop through all combinations of end points until we find one that intersects    
-    for endPointIndexC1 in cluster1[1:]:
-        if goodCluster==True:
-            for endPointIndexC2 in cluster2[1:]:
-                goodCluster = doSpheroCylindersIntersect(p1, xyzList[endPointIndexC1], p2, xyzList[endPointIndexC2], radius)
-                if goodCluster ==False:
-                    break
-
-    return goodCluster
-
-def doSpheroCylindersIntersect(p1, q1, p2, q2, radius):
-    # tests to see if two spherocylinders intersect.
-    # the points are the centres of the two spheres at either end of the sphero cylinder.
-    # p1 and q1 are the start and end of one spherocylinder, p2 and q2 the start and 
-    # end of the second.    
-    goodPos = True
-    if cart.closestApproachTwoLineSegmentsSquared(p1, q1, p2, q2) < (2.0 * radius)**2:
-        goodPos = False
-        break    
-    return goodPos
-
-    
-    
-def pickTestCluster(rootNodeIndex, validIndexList, xyzList, maxTubeLength, numNodes):    
-
-    outListIndex = [rootNodeIndex] 
-    rootNode = xyzList[rootNodeIndex]
-    
-    # loop through the list and make note of the indices of at most numNodes 
-    # nodes that are within maxTubeLength of the rootnode 
-    for nodeIndex in validIndexList:
-        if nodeIndex!=rootNodeIndex:
-            if np.linalg.norm(rootNode - xyzList[nodeIndex]) < maxTubeLength:
-                outListIndex.append(nodeIndex)  
-        if len(outListIndex)==numNodes:
-            break
-
-    return outListIndex        
-
 
 if __name__=="__main__":
 
@@ -408,19 +326,35 @@ if __name__=="__main__":
     polymerBrushDict['brushes'] = [brushDict1, brushDict2]#, brushDict1, brushDict2]
     polymerBrushDict['connectors'] = [connectorDict12]#, connectorDict12, connectorDict12]
        
-    numNodesInit = 100
-    nodeDist = 40.0
-    xSize = 100
-    ySize = 100
-    zSize = 100
-    TubeRadius = 8
-    MaxTubeLength = 50
-    MaxNumAttempts = 1000
-    ValidNodesPerCluster = [4, 5]
-    unimerBaseDist = 2
+    numGen1Worms = 1
+    xSize = 1000
+    ySize = 1000
+    zSize = 1000
+    alpha1 = -5 
+    alpha2 = 5
+    beta1 = 160
+    beta2 = 180
+    wormRadius = 8
+    segmentLength = 1
+    unimerMinDist = 1.5
+    packingFraction = 0.4
+    minSegmentsPerWorm = 5
+    coneAngleWorm = 45
+    wormDirector = np.array([1.0, 0.0, 0.0])
+    wormAlignmentAngularRange = 10
+    numWormGenerations = 1
+    minBranchAngle = 25
+    wormBranchDensity = 0.1
+    maxNumAttempts = 100
     
+    WormNetworkXYZPoints, WormNetworkXYZDirectors= makeWormNetwork( numGen1Worms, 
+                                                                    xSize, ySize, zSize, 
+                                                                    alpha1, alpha2, beta1, beta2, 
+                                                                    wormRadius, segmentLength, unimerMinDist, packingFraction,
+                                                                    minSegmentsPerWorm, coneAngleWorm, wormDirector, wormAlignmentAngularRange, 
+                                                                    numWormGenerations, minBranchAngle, wormBranchDensity, maxNumAttempts,
+                                                                    selfAvoid=False, pointsToAvoid=[], visualiseEnvelope=(0,20), envelopeList=["None"])
     # generate the XYZVals packed in the outer cylinder
-    WormNetworkXYZPoints, WormNetworkDirectors = makeWormNetwork(numNodesInit, nodeDist, xSize, ySize, zSize, TubeRadius, MaxTubeLength, MaxNumAttempts, ValidNodesPerCluster, unimerBaseDist)
     fIO.saveXYZList(WormNetworkXYZPoints, ['C'] * len(WormNetworkXYZPoints), "wormNetwork.xyz")
 
 #     from Projects.GeneralPolymerBrush import GeneralBlockPolymer as GBCP

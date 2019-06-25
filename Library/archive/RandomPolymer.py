@@ -250,6 +250,14 @@ class RandomPolymerPackNBB(NBB):
                     if self.verbose==1: 
                         print("Packing violation")
 
+        if inBounds:
+            for zPos in self.pointsToAvoid:
+                # if new position occurs within minDist of any of the points to avoid throw an error.
+                if np.linalg.norm((zPos - pos)) <= self.minDist:
+                    inBounds= False
+                    if self.verbose==1: 
+                        print("Packing violation")
+
         return inBounds
 
         

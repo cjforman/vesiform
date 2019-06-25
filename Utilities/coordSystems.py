@@ -300,30 +300,35 @@ def constructTNBFrame(p1, p2, p3):
     return outVecs
 
 def bondAngle(p1, p2, p3):
-    # returns the absolute size of the interior angle between three points in range 0 to pi
-    U = p2 - p1
-    
+    # returns the size of the interior angle at P2.
+    # This is the angle between the vectors from P2 to the other points.
+    # Returns a value in the range 0 to pi
+    U = p1 - p2
+    V = p3 - p2
+    UHat = U/np.linalg.norm(U)
+    VHat = V/np.linalg.norm(V)
+    return np.arccos(np.clip(np.dot(UHat, VHat), -1.0, 1.0))
     # construct the TNB frame
-    TNB = constructTNBFrame(p1, p2, p3)
+    #TNB = constructTNBFrame(p1, p2, p3)
 
-    if TNB.all()==None:
+    #if TNB.all()==None:
         # co linear points so bond angle is either 0 or 180.
         # if line segment 1 to 3 is great than 1 to 2 then we have 180 else 0
-        lineSeg1To3 = np.linalg.norm(p3-p1)
-        lineSeg1To2 = np.linalg.norm(U)
-        bondAngle = 0.0
-        if lineSeg1To3>lineSeg1To2:
-            bondAngle = np.pi
-    else:
+    #    lineSeg1To3 = np.linalg.norm(p3-p1)
+    #    lineSeg1To2 = np.linalg.norm(U)
+    #    bondAngle = 0.0
+    #    if lineSeg1To3>lineSeg1To2:
+    #        bondAngle = np.pi
+    #else:
         # the bond angle is the angle between U and T in the T, B plane
         # U's coords in the T, B plane are U.THat = p and U.BHat = q
         # Atan2(q,p) gives the internal angle between U and T (b1 and b2) 
         # thus beta (bond angle is pi minus this.
-        q = np.dot(U, TNB[2])
-        p = np.dot(U, TNB[0])
-        bondAngle = np.pi - abs(np.arctan2(q, p)) # atan2(u.bHat, u.tHat)
+    #    q = np.dot(U, TNB[2])
+    #    p = np.dot(U, TNB[0])
+    #    bondAngle = np.pi - abs(np.arctan2(q, p)) # atan2(u.bHat, u.tHat)
     
-    return bondAngle
+    #return bondAngle
 
 def Dihedral(p1, p2, p3, p4):
     # returns dihedral angle of four points in range -pi to pi
@@ -481,7 +486,35 @@ def FrustumZAtZeroRadius(z1, z2, r1, r2):
     
     return retZ
         
+def checkPointInFrustum(pos, Z1, R1, Z2, R2, verbose):
+    # check to see if a position is inside a given frustum
+    # returns true if it is.
+    ZMin = min(Z1, Z2)
+    ZMax = max(Z1, Z2)
+    
+    # principal axis of envelope is aligned with Z axis. 
+    # Compute radial distance from z axis and z height
+    zComponent = pos[2] 
+    r = np.sqrt(pos[0]**2 + pos[1]**2)
+        
+    if np.abs(zComponent - 0.0) < 1e-10:
+        zComponent = 0.0
+        
+    inBounds = True # assume it's inside the frustum
+    if  zComponent > ZMax or zComponent < ZMin:
+        inBounds = False
+        if verbose==1:
+            print("frustum Z Violation")
 
+    if inBounds:     
+        if r > FrustumRadiusAtGivenZ(zComponent, Z1, Z2, R1, R2):
+            inBounds = False
+            if verbose==1:
+                print("frustum R Violation") 
+    
+    return inBounds
+    
+    
 def rotatePointInChain(points, angle):
     # takes a list of three points and rotates point 2 about an axis between points 1 and 3 
     # by the given angle. Conserves the distance between the points and bond angle but changes the bond angles in a chain.
@@ -1092,7 +1125,7 @@ if __name__== '__main__':
 
     frustumPointsZHeightsXYZ = [ pickRandomPointInFrustumAtGivenZHeightXYZ(float(z), -10.0, 10.0, 5.0, 20.0) for z in range(-10, 12, 2) for b in range(100) ]
     FIO.saveXYZ(frustumPointsZHeightsXYZ, 'O', "testFrustumSelectedZ.xyz")
-    print =("Done Frustum Selected Z")
+    print("Done Frustum Selected Z")
 
 
     ellipsoidPoints = [ pickRandomPointUniformlyOnEllipsoid(10.0, 15.0, 20.0) for a in range(1000) ]

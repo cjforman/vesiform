@@ -9,7 +9,7 @@ class PDB():
     
     def __init__(self, filename):
         #read in the atoms from the pdb
-        print "Processing pdb filename: ", filename
+        print("Processing pdb filename: ", filename)
         self.filename = filename
         self.readPDBAtoms(filename)
         
@@ -26,8 +26,8 @@ class PDB():
         try:
             vst = open(filename, 'w')
         except IOError as e:
-            print "I/O error({0}): {1}".format(e.errno, e.strerror)
-            raise Exception, "Unable to open output file: "+filename
+            print("I/O error({0}): {1}".format(e.errno, e.strerror))
+            raise(Exception, "Unable to open output file: " + filename)
     
         #parse data 
         for atom in self.atoms:
@@ -46,9 +46,9 @@ class PDB():
                     if not a in atoms:
                         atoms.append(a)
                 except:
-                    print "line: " + line + " not understood"
+                    print("line: " + line + " not understood")
                     exit(0)
-        print len(atoms), " HETATOM lines read from pdb file."                    
+        print(len(atoms), " HETATOM lines read from pdb file.")                    
         return atoms
 
 
@@ -62,10 +62,10 @@ class PDB():
                     if not a in atoms:
                         atoms.append(a)
                 except:
-                    print "line: " + line + " not understood"
+                    print("line: " + line + " not understood")
                     exit(0)
                     
-        print len(atoms), " ATOM lines read from pdb file."
+        print(len(atoms), " ATOM lines read from pdb file.")
         return atoms
 
     def parsePdbLine(self, line):
@@ -115,8 +115,8 @@ class PDB():
         try:
             l = 'ATOM {: >06d} {: <4}{:1}{:3} {:1}{: >4d}{:1}   {: >8.3f}{: >8.3f}{: >8.3f}{: >6.2f}{: >6.2f}      {: <4}{: >2}{: >2}\n'.format(int(atom[0]), atom[1], atom[2], atom[3], atom[4], int(atom[5]), atom[6], float(atom[7]), float(atom[8]), float(atom[9]), float(atom[10]), float(atom[11]), atom[12],atom[13],atom[14])
         except:
-            print "unable to write atom to string: "
-            print atom
+            print("unable to write atom to string: ")
+            print(atom)
             exit(0)
         return l
 
@@ -151,7 +151,7 @@ class PDB():
                 elif atom[3] in ['CYS', 'SEC','GLY', 'PRO', 'HYP']:
                     atom[1] ='S' # make the special residues green
                 else:
-                    print 'Unrecognised residue name:', atom[3], ' line:', atom[0]
+                    print('Unrecognised residue name:', atom[3], ' line:', atom[0])
                     atom[1] ='Pb' # dark grey
     
         self.saveXYZFromPDB(atom2XYZ, outfile)
@@ -180,7 +180,7 @@ class PDB():
     
         #check the lists are compatible
         if len(self.atoms)!=len(newCoords):
-            print "atom lists incompatible sizes" 
+            print("atom lists incompatible sizes") 
             sys.exit(0)
     
         #seed the output array
@@ -198,7 +198,7 @@ class PDB():
                 try:
                     atom = self.parsePdbLine(newLine)
                 except:
-                    print "line: " + line + " not understood"
+                    print("line: " + line + " not understood")
                     exit(0)
                 #replace the coords
                 atom[7] = newCoords[curCoord][0]
@@ -220,7 +220,7 @@ class PDB():
         ''' Replaces the atomic coords in the atoms array with a new set of coords.'''
     
         if len(self.atoms)!=len(newCoords):
-            print "atom lists incompatible sizes" 
+            print("atom lists incompatible sizes") 
             sys.exit(0)
     
         newAtoms = []
@@ -278,15 +278,15 @@ class PDB():
         
         #mode 1 numbered with three letter codes on separate lines
         if mode==1:
-            print "mode: 1 selected"
+            print("mode: 1 selected")
             fIO.writeTextFile([str(res[0])+' '+str(res[1])+'\n' for res in residues],outfile)
         #mode 1 unumbered with three letter codes on separate lines - suitable for a modify sequence command
         if mode==2:
-            print "mode: 2 selected"
+            print("mode: 2 selected")
             fIO.writeTextFile([str(res[1])+'\n' for res in residues],outfile)
         #mode 3 string of first letters only
         if mode==3:
-            print "mode: 3 selected"
+            print("mode: 3 selected")
             l=''
             for res in residues:
                 #if not a special case then copy first letter otherwise deal with each residue type on its own.
@@ -387,7 +387,7 @@ class PDB():
                     renaming=True
     
                 #debug statement
-                #print atom[5], newResSeqIndex, resCount, lastResNumber, lastResProc
+                #print(atom[5], newResSeqIndex, resCount, lastResNumber, lastResProc)
     
                 #Do we need to reprocess the current residue?
                 if (renaming):
@@ -455,13 +455,13 @@ class PDB():
     
 if __name__=="__main__":
     
-    pdbfilename = sys.argv[1]
+    pdbfilename = 'dargo##' #sys.argv[1]
     
     # create instance of PDB object
     pdbObject = PDB(pdbfilename)
     infile = fIO.fileRootFromInfile(pdbfilename, "pdb")
     pdbObject.makeXYZForBlenderFromPDB(infile + ".xyz", backBoneOnly=True)
-    print"Done"
+    print("Done")
     
     
     

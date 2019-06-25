@@ -65,10 +65,10 @@ class BuildingBlockGenerator(keyProc):
         # visualise envelope if requested
         if visualiseEnvelope[0]>0:
             print("Visualising envelope")
-            self.visualiseEnvelope(visualiseEnvelope[0], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[2])
+            self.visualiseEnvelopeFunc(visualiseEnvelope[0], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[1], visualiseEnvelope[2])
 
         # from the points to avoid list remove those points that would fail the envelope test
-        self.pointsToAvoid =[]
+        self.pointsToAvoid=[]
         indicesOfPointsToRemoveFromPointsToAvoid = self.checkAllPointsInBounds(pointsToAvoid)
         if len(indicesOfPointsToRemoveFromPointsToAvoid)>0:
             self.pointsToAvoid = [ pointsToAvoid[index] for index in range(0, len(pointsToAvoid)) if not index in indicesOfPointsToRemoveFromPointsToAvoid]
@@ -142,26 +142,34 @@ class BuildingBlockGenerator(keyProc):
                              self.blockRefPoint,
                              self.blockDirectorHat)
 
-    def checkEnvelope(self, xyzVals):
+    def checkEnvelope(self, xyzVals, ignorePTA=False, pointsToAvoid=[]):
         # returns a list of indices of the points which violate the envelope 
         # and pointsToAvoid list.
         indicesOutside = []
         for n, pos in enumerate(xyzVals):
-            if not self.checkPointInBounds(pos):
+            if not self.checkPointInBounds(pos, ignorePTA=ignorePTA, pointsToAvoid=pointsToAvoid):
                 indicesOutside.append(n)
         return indicesOutside
 
-    def checkPointInBounds(self, pos, ignorePTA=False):
+    def checkPointInBounds(self, pos, ignorePTA=False, pointsToAvoid=[]):
         # checks the external conditions that we wish to enforce on the points
-        # These are either points to avoid or envelopes (regions of space that are out of bounds). 
+        # These are either pointsToAvoid or envelopes (regions of space that are out of bounds).
+        # Can supply an auxiliary set of pointsToAvoid which overides the pointsToAvoid that are
+        # the member variable. Can shoose to ignore pointsToAvoid, whether overwritten or not. 
         # pos is in xyz coords
         
         # assume the pos is inBounds to begin with.
         inBounds = True
 
         if ignorePTA==False:
-            # check pos against points to avoid 
-            for pta in self.pointsToAvoid:
+            
+            # if points to avoid are not supplied as a parameter (i.e. have the default value of an empty list)
+            # then set the local pointsToAvoid Variable to point to self.pointsToAvoid
+            if not pointsToAvoid:
+                pointsToAvoid=self.pointsToAvoid
+                
+            # check pos against whatever points to avoid we have determined above 
+            for pta in pointsToAvoid:
                 if np.linalg.norm(pta - pos) < self.minDist:
                     inBounds = False
                     if self.verbose==1:
@@ -254,29 +262,8 @@ class BuildingBlockGenerator(keyProc):
                 Radius1 = envelopeParams[1]
                 Z2 = envelopeParams[2]
                 Radius2 = envelopeParams[3]
-                
-                ZMin = min(Z1, Z2)
-                ZMax = max(Z1, Z2)
-                
-                # principal axis of envelope is aligned with Z axis. 
-                # Compute radial distance from z axis and z height
-                zComponent = pos[2] 
-                r = np.sqrt(pos[0]**2 + pos[1]**2)
-        
-                if np.abs(zComponent - 0.0) < 1e-10:
-                    zComponent = 0.0
-        
-                inBounds = True
-                if  zComponent > ZMax or zComponent < ZMin:
-                    inBounds = False
-                    if self.verbose==1:
-                        print("frustum Z Violation")
+                inBounds = coords.checkPointInFrustum(pos, Z1, Radius1, Z2, Radius2, self.verbose)
 
-                
-                if r > coords.FrustumRadiusAtGivenZ(zComponent, Z1, Z2, Radius1, Radius2):
-                    inBounds = False
-                    if self.verbose==1:
-                        print("frustum R Violation") 
             except KeyError:
                 pass
         
@@ -334,9 +321,31 @@ class BuildingBlockGenerator(keyProc):
             except KeyError:
                 pass
 
+        if inBounds:
+            # in this envelope any point outside the a cuboid range is out of bounds
+            try:
+                envelopeParams = self.envelopeSummary['cuboid']
+                # the six params define xmin, xmax, ymin, ymax, zmin and zmax
+                inBounds = True
+                if pos[0] < envelopeParams[0]: # xmin
+                    inBounds=False
+                if pos[0] > envelopeParams[1]: # xmax
+                    inBounds=False                    
+                if pos[1] < envelopeParams[2]: # ymin
+                    inBounds=False
+                if pos[1] > envelopeParams[3]: # ymax
+                    inBounds=False                   
+                if pos[2] < envelopeParams[4]: # zmin
+                    inBounds=False
+                if pos[2] > envelopeParams[5]: # zmax
+                    inBounds=False                   
+            
+            except KeyError:
+                pass
+
         return inBounds
     
-    def visualiseEnvelope(self, N, X, Y, Z, filename):
+    def visualiseEnvelopeFunc(self, N, X, Y, Z, filename):
         
         posList = [ np.array([rnd.uniform(-X, X), rnd.uniform(-Y, Y), rnd.uniform(-Z, Z) ]) for _ in range(N) ]
 

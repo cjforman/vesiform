@@ -4,8 +4,26 @@ Created on 14 Dec 2017
 @author: chris forman
 '''
 import numpy as np
+#import networkx as nx
 
 # ***** IO Functions ******
+
+def visualiseNetwork(g, points, filename, dZ=1, particleName='P'):
+        xyzVals = []
+        xyzVals += [ points[node] for node in g.nodes ]
+            
+        for edge in g.edges:
+            node1 =  points[edge[0]]
+            node2 =  points[edge[1]]
+            director = node2 - node1
+            length = np.linalg.norm(director)
+            director = director/length
+            numPoints = int(length/dZ)
+            dZ2 = length/(numPoints + 1.0)
+            xyzVals += [  node1 + float(zIndex) * float(dZ2) * director for zIndex in range(1, numPoints + 1)   ]
+                
+        saveXYZ(xyzVals, particleName, filename)  
+
 
 def ct2xyz(filename):
     atomLines = readTextFile(filename)
