@@ -23,7 +23,7 @@ class VolumePackEllipsoidBBG(NBB):
         NBB.initialiseParameters(self) 
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for NPackBBG object"
+            print("Critical Parameters are undefined for NPackBBG object")
             sys.exit()        
     
     def generateBuildingBlock(self, numPoints, xRadius, yRadius, zRadius, theta1, theta2, phi1, phi2, minDist, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200,'envelope.xyz'), showBlockDirector=False, defaultBlockRefPoint=None):

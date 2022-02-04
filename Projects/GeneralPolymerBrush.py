@@ -3,6 +3,7 @@ import copy as cp
 import random as rnd
 from Library.peptideBackbone import peptideBackboneGenerator as PBG
 from Library.randomPolymer import RandomPolymerPackBBG as RPPBBG
+import Utilities.cartesian as carts 
 import Utilities.coordSystems as coords  
 import Utilities.fileIO as fIO
 
@@ -25,9 +26,9 @@ def GeneralBlockPolymer(polymerDict):
     backboneInfo = makeBlockCopolymerBackbone(backBoneDictList, connectorDictList)
     
     # decorate the polymer backbone with brushes using the brush information
-    polymerBrushXYZ, polymerBrushNames = decoratePolymerBackbone(brushDictList, backboneInfo)
+    polymerBrushXYZ, polymerBrushNames, brushesPerBlock = decoratePolymerBackbone(brushDictList, backboneInfo)
 
-    return polymerBrushXYZ, polymerBrushNames
+    return polymerBrushXYZ, polymerBrushNames, brushesPerBlock
         
 def makeBlockCopolymerBackbone(backboneDictList, connectorDictList):
     ''' function generates a block Copolymer with the parameters of each block defined in
@@ -48,10 +49,18 @@ def makeBackbones(backboneDictList):
         backboneBBG = RPPBBG(backbone['filename'])
         
         # create the starting point of the polymer
-        startPointBackBone = np.array([ 0.0, 0.0, backbone['Z1']])
+        try:
+            startPointBackBone = backbone['pointToStart']
+        except KeyError:
+            startPointBackBone = np.array([ 0.0, 0.0, backbone['Z1']])
     
         # generate the frustrum containing the polymer
         envelopeList = ['frustum ' + str(backbone['Z1']) + ' ' + str(backbone['R1']) + ' ' + str(backbone['Z2']) + ' ' + str(backbone['R2'])]
+    
+        try:
+            pointsToAvoid = backbone['PointsToAvoid']
+        except KeyError:
+            pointsToAvoid = []
     
         # assume failure
         rejectPolymer = True
@@ -68,7 +77,8 @@ def makeBackbones(backboneDictList):
                                                             backbone['minDist'],
                                                             backbone['bondLength'],
                                                             envelopeList=envelopeList,
-                                                            visualiseEnvelope=(0, 100, backbone['name'] + '_envelope.xyz'))
+                                                            visualiseEnvelope=(0, 2*backbone['R2'] , backbone['name'] + '_envelope.xyz'),
+                                                            pointsToAvoid=pointsToAvoid)
             
             backboneBB.blockAtomNames = backbone['monomerNames']
         
@@ -155,8 +165,30 @@ def connectBackboneSegments(backboneSet, connectorDictList):
 
 def breakListToSubList(inpList, indexPoints):
         return [ inpList[index:nextIndex] for index, nextIndex in zip(indexPoints[0:-1],indexPoints[1:])] 
+
+def rotateLastNEntries(XYZList, index, angle):
+    newXYZList = cp.copy(XYZList)
+    p1 = newXYZList[index] - newXYZList[index - 1]
+    p2 = newXYZList[index + 1] - newXYZList[index]
+    n = np.cross(p2, p1)
+    n = n/np.linalg.norm(n)
+    for i,p in enumerate(newXYZList):
+        if i>=index:
+            newXYZList[i] = carts.rotPAboutAxis(p - newXYZList[index], n, angle) + newXYZList[index] 
+    return newXYZList
             
-def decoratePolymerBackbone(brushDictList, backboneInfo): 
+def decoratePolymerBackbone(brushDictList, backboneInfo):
+    # each dictionary defines the nature of the side chains on one block of the main polymer.
+    # the overall behaviour is controlled by use of the mode keyword. 
+    # THe mode Keyword can contain any combination of the following control phrases in any order
+    #
+    # Peptide or Polymer  (One of these is mandatory and you cannot have both).
+    # Alternate   (the side chains are on alternate sides of the peptide (adds 180 to the phase)
+    # Mirror (The phase of half of the side chains are randomly flipped by 180 degrees)
+    # Random (side chains are dispersed statistically over the backbone)
+    # Residues (filters a peptide for CA positions only to represent each residue).
+    #
+    # other keywords may be necessary and are defined in the brush dictionary separately, and not in the 'mode' keyword.     
 
     # unpack input
     backboneXYZ = backboneInfo[0]
@@ -164,50 +196,89 @@ def decoratePolymerBackbone(brushDictList, backboneInfo):
     backboneSegmentLengths = backboneInfo[2]
     backboneTNBList = backboneInfo[3]
 
-    # break the list of XYZ points into list of points for each segment
+    # break the list of XYZ points into sublists for the backbone points that belong to each block
     backBoneXYZList = breakListToSubList(backboneXYZ, np.cumsum(np.concatenate((np.array([0]), backboneSegmentLengths), 0)))
 
-    # set up output
+    # set up output - it is important to ensure the correlation between name and xyz points is always maintained. 
+    # Should probably set them up as tuples but meh.
+    # begin the final output which is just a list of points and point names for the xyz file 
     polymerXYZ = cp.copy(backboneXYZ)
     polymerNames = cp.copy(backboneNames)
-    
-    for brush, numBrushes, TNB, points in zip(brushDictList, backboneSegmentLengths, backboneTNBList, backBoneXYZList):
-        if brush['numMonomers']>0:
-            # create the brush generator. Default is polymer. Check to see if we want a peptide brush 
-            if 'Peptide' in brush['mode']:
-                brushBBG = PBG(brush['filename'])
-                brushBB = brushBBG.generateBuildingBlock(brush['numMonomers']) # only need to create this once for peptide backbones as they are either alpha or beta.
-                brushBB.blockAtomNames = brush['monomerNames']
-            else:
-                brushBBG = RPPBBG(brush['filename'])
+    polymerBrushesPerBlock = []
+
+    # loop through each block and add the side chain info to the output lists.     
+    for brush, blockLength, TNB, points in zip(brushDictList, backboneSegmentLengths, backboneTNBList, backBoneXYZList):
         
-            # Set the angle of each brush around the segment director defined relative to the Binormal in the TNB frame for that polymer.
+        # make a 0-based list of backbone indices from indexOfFirstBrush to N - 1 where N is the blockLength.
+        backboneIndexList = np.arange(brush['indexOfFirstBrush'], blockLength)
+        
+        # make a sublist starting at 0 to the end of the backboneIndex list with an increment of spacing
+        brushPointIndexList = backboneIndexList[ 0 :: int( brush['spacing'] + 1 ) ]
+        
+        # count the number of brushes
+        numBrushes = len(brushPointIndexList)
+
+        # record number of brushes        
+        polymerBrushesPerBlock.append(numBrushes)
+        
+        # now we now the number of brushes from the spacing information for this brush,
+        # if we need them randomly distributed we can just choose the right number of indices randomly from the original list. 
+        # Can't choose an index before indexOfFirstBrush because they aren't in the list!
+        if 'Random' in brush['mode']:
+            brushPointIndexList = np.sort(np.random.choice(backboneIndexList, size=numBrushes, replace=False))
+
+        # only add a brush if the numMonomers is >0
+        if brush['numMonomers']>0:
+            # if the brush is a peptide sequence then it will be the same for all the brushes,
+            # i.e. an alpha helix or a beta strand. For a hairpin, generate a random polymer. 
+            if 'Peptide' in brush['mode']:
+                # numMonomers in brush dict refers to number of residues!
+                brushBBG = PBG(brush['filename']) # generate a betastrand or an alphahelix (if you want hair pin, just generate a random polymer)
+                brushBB = brushBBG.generateBuildingBlock(brush['numMonomers'], showBlockDirector=False, nameCA=True)
+                
+                # if requested filter the peptide for only CA positions to represent a residue rather than backbone atoms. 
+                if 'Residues' in brush['mode']:
+                    brushNames = [ name for name in brushBB.blockAtomNames if name=='CA' ]
+                    brushXYZ = [ pos for pos, name in zip(brushBB.blockXYZVals, brushBB.blockAtomNames) if name=='CA' ]
+                else:
+                    brushNames = brushBB.blockAtomNames
+                    brushXYZ = brushBB.blockXYZVals
+                try:
+                    if brush['doProlineKink']:
+                        prolinePoints= [i for i, x in enumerate(brush['monomerNames']) if x == "P"]
+                        for prolinePoint in prolinePoints:
+                            brushXYZ = rotateLastNEntries(brushXYZ, prolinePoint, brush['prolineKinkAngle'])
+                except KeyError:
+                    pass
+            else:
+                # otherwise we are using a polymer. Create a generator. Each will be different. 
+                brushBBG = RPPBBG(brush['filename'])
+
+            # Set the angle of each brush around the block director defined relative to the Binormal in the TNB frame for that polymer.
             # The range of angles is defined in the dictionary.
-            brushPhaseAngles = [ rnd.uniform(0, brush['phaseRange'] * np.pi/180.0) for _ in range(0, numBrushes) ]
+            brushPhaseAngles = [ rnd.uniform(0, brush['phaseRange'] * np.pi/180.0) for _ in range(numBrushes) ]
 
             # if the word Alternate is in the mode than add 180 to every other phase        
             if "Alternate" in brush['mode']:
-                for index in range(0, numBrushes):
-                    if index % 2 ==0:
-                        brushPhaseAngles[index] += np.pi
+                for brushNumber in range(numBrushes):
+                    if brushNumber % 2==0:
+                        brushPhaseAngles[brushNumber] += np.pi
             
             # if the word "mirror" is in the mode then add 180 randomly to half the brush phases 
             if "Mirror" in brush['mode']:
-                numFlipped = 0
-                indexList = list(range(0, numBrushes))
-                while numFlipped < numBrushes/2:
-                    index = rnd.choice(indexList)
+                for index in np.random.choice(np.arange(numBrushes), int(np.floor(numBrushes/2)), replace=False):
                     brushPhaseAngles[index] += np.pi
-                    numFlipped += 1
-                    indexList.remove(index)    
-        
+                    
             # generate directors in direction of phase angles
             brushDirectors = [ np.cos(angle) * TNB[2] + np.sin(angle) * TNB[1] for angle in brushPhaseAngles] 
             brushDirectorsNorm = [ d/np.linalg.norm(d) for d in brushDirectors]
     
-            # for each of the points in the backbone generate a brush as defined    
-            for point, director in zip(points, brushDirectorsNorm):
+            # for each of the points in the backbone for which we are generating a brush, create a brush 
+            # and translate and rotate it to the correct place. For peptides we already generated a base brush and names, which we will clone.     
+            for brushIndex, backBoneIndex in enumerate(brushPointIndexList):
+
                 if "Polymer" in brush['mode'] and not "Peptide" in brush['mode']:
+                    
                     # if we're doing a polymer then generate a new polymer with the given polymer parameters for each pass.
                     polyStart = np.array([ 0.0, 0.0, brush['Z1']])
                     envelopeList = ['frustum ' + str(brush['Z1'] - brush['minDist']) + ' ' + str(brush['R1']) + ' ' + str(brush['Z2']) + ' ' + str(brush['R2'])]
@@ -222,24 +293,55 @@ def decoratePolymerBackbone(brushDictList, backboneInfo):
                                                               brush['bondLength'],
                                                               envelopeList=envelopeList,
                                                               visualiseEnvelope=(0, 100, brush['name'] + '_envelope.xyz'))
-                    # work out the block director
-                    if brush['numMonomers']>2:
-                        blockDirector = coords.axisFromHelix(brushBB.blockXYZVals)
+                    
+                    brushXYZ = brushBB.blockXYZVals
+                    brushNames = brushBB.blockAtomNames
+                        
+                # overrides the names created in the building block generator with monomerNames in BrushDictionary
+                try:
+                    if len(brushXYZ)==len(brush['monomerNames']):
+                        brushNames = brush['monomerNames']
                     else:
-                        if brush['numMonomers']==2:
-                            blockDirector = brushBB.blockXYZVals[1] - brushBB.blockXYZVals[0]
-                            blockDirector = blockDirector/np.linalg.norm(blockDirector)
-                        if brush['numMonomers']==1:
-                            blockDirector = np.array([0.0, 0.0, 1.0])
+                        print("Warning: Number of XYZ vals and number of specified monomer names inconsistent. Not overriding generator.") 
+                except KeyError:
+                    pass
+
+                # work out the brush director from the brushXYZ vals
+                if brush['numMonomers']>2:
+                    brushDirector = coords.axisFromHelix(brushXYZ)
+                elif brush['numMonomers']==2:
+                    brushDirector = brushXYZ[1] - brushXYZ[0]
+                    brushDirector = brushDirector/np.linalg.norm(brushDirector)
+                else:
+                    brushDirector = np.array([0.0, 0.0, 1.0])
+
+                # flip the director in Peptide mode. Work around some bug to do with the way the peptide chain is constructed  
+                if "Peptide" in brush['mode'] and "Residues" not in brush['mode']:
+                    brushDirector *= -1 
     
-                    # rotate the brush and set it at the right place
-                    brushXYZVals = coords.transformFromBlockFrameToLabFrame(director, point + brush['bondLength'] * director, 0.0, blockDirector, brushBB.blockXYZVals[0], brushBB.blockXYZVals)
-            
-                    # concatenate the brush positions and the brush names to the output arrays
-                    polymerXYZ = np.concatenate( (polymerXYZ, brushXYZVals), 0)
-                    polymerNames = np.concatenate( (polymerNames, brush['monomerNames']), 0)
+                try:
+                    if brush['doProlineKink']:
+                        prolinePoints= [i for i, x in enumerate(brush['monomerNames']) if x == "P"]
+                        for prolinePoint in prolinePoints:
+                            brushXYZ = rotateLastNEntries(brushXYZ, prolinePoint, brush['prolineKinkAngle'])
+                except KeyError:
+                    print("Skipping kink")
+    
+                # get the target point and director
+                targetDirector = brushDirectorsNorm[brushIndex]
+                targetPoint = points[backBoneIndex]
+
+                # rotate, translate the coords and concatenate the brush positions and brush names to the output arrays
+                polymerXYZ = np.concatenate( (polymerXYZ, 
+                                              coords.transformFromBlockFrameToLabFrame( targetDirector,
+                                                                                        targetPoint + brush['bondLength'] * targetDirector,
+                                                                                        0.0,
+                                                                                        brushDirector,
+                                                                                        brushXYZ[0],
+                                                                                        brushXYZ)), 0)
+                polymerNames = np.concatenate( (polymerNames, brushNames), 0)
         
-    return polymerXYZ, polymerNames 
+    return polymerXYZ, polymerNames, polymerBrushesPerBlock
 
 if __name__=="__main__":
 

@@ -90,7 +90,7 @@ class ConstrainedPolymerPackBBG(BBG):
                                bondLength,
                                numCrankMoves,
                                pointsToAvoid=[],
-                               visualiseEnvelope=(0,20),
+                               visualiseEnvelope=(0,20,'envelope.xyz'),
                                envelopeList=["None"],
                                angularRange=["None"],
                                startDirector=["None"]):
@@ -166,9 +166,9 @@ class ConstrainedPolymerPackBBG(BBG):
         if self.dumpInterimFiles==1 and self.numCrankMoves > 0:
             fIO.saveXYZList(xyzVals, self.blockNames, 'crankedChain.xyz')
         
-        
-        print("Folding structure up.")
-        xyzVals = self.foldInsideEnvelope(xyzVals)
+        if self.maxNumFoldingMoves>0:
+            print("Folding structure up.")
+            xyzVals = self.foldInsideEnvelope(xyzVals)
 
         if self.dumpInterimFiles==1:
             fIO.saveXYZList(xyzVals, self.blockNames, 'foldedChain.xyz')
@@ -416,7 +416,7 @@ class ConstrainedPolymerPackBBG(BBG):
         if minNumIndicesOutside > 0:
             print("Warning: there are points outside the envelope that were not moved inside.")
             if self.dumpInterimFiles:
-                fIO.saveXYZ(minXYZVals[minIndices], 'B', 'outsideEnvelope.xyz')
+                fIO.saveXYZ([ xyzVals[index] for index in minIndices], 'B', 'outsideEnvelope.xyz')
                 
         return minXYZVals
         
@@ -526,7 +526,7 @@ class ConstrainedPolymerPackBBG(BBG):
         # if valid crank is true then the new vals are inserted into the new list
         return workingXYZVals, validCrank
 
-    def checkPointInBounds(self, pos, ignorePTA=False):
+    def checkPointInBounds(self, pos, ignorePTA=False, pointsToAvoid=[]):
         inBounds = True
 
         # in this envelope any point outside the ellipse is out of bounds
@@ -556,7 +556,7 @@ class ConstrainedPolymerPackBBG(BBG):
 
         # check the underlying checkPointInBounds for other checks that may be included
         if inBounds:
-            inBounds = BBG.checkPointInBounds(self, pos, ignorePTA)
+            inBounds = BBG.checkPointInBounds(self, pos, ignorePTA=ignorePTA, pointsToAvoid=pointsToAvoid)
         
         return inBounds
         

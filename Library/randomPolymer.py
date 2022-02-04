@@ -233,6 +233,7 @@ class RandomPolymerPackBBG(BBG):
         maxStepScale = 1.0
         numMoves = 0
         curMin = 0
+        
         while minNumIndicesOutside > 0 and numMoves < self.maxNumFoldingMoves:
             
             # Do the dihedral move on the current working set. 

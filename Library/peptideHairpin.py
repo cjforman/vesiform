@@ -65,7 +65,7 @@ class peptideHairpinGenerator(CPBBG):
         self.PBG = PBG(self.paramFilename)
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for hairpin"
+            print("Critical Parameters are undefined for hairpin")
             sys.exit()        
 
     def generateBuildingBlock(  self, 
@@ -75,7 +75,7 @@ class peptideHairpinGenerator(CPBBG):
                                 minDist,
                                 numCrankMoves,
                                 pointsToAvoid=[],
-                                visualiseEnvelope=(0,20), 
+                                visualiseEnvelope=(0,20,'envelope.xyz'), 
                                 envelopeList=['None'],
                                 nameCA=False):
         self.numResidues = numResidues
@@ -99,12 +99,12 @@ class peptideHairpinGenerator(CPBBG):
         # check starting points are legal or it's gonna be a long wait.
         for pos in self.pointsA:
             if not self.checkPointInBounds(pos):
-                print "Error Warning: One of pointsA out of bounds"
+                print("Error Warning: One of pointsA out of bounds")
                 time.sleep(3)
              
         for pos in self.pointsB:
             if not self.checkPointInBounds(pos):
-                print "Error Warning: One of pointsB out of bounds"
+                print("Error Warning: One of pointsB out of bounds")
                 time.sleep(3)
         
         return CPBBG.generateBuildingBlock(self, self.numPoints, pointsA[2], pointsB[2], minDist, bondLength, numCrankMoves, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid, envelopeList=envelopeList) 
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     pointA = np.array([10.0, 10.0, 10.0])
     pointB = np.array([0.0, 0.0, 0.0])
     
-    print "Estimate min num residues: ", np.linalg.norm(pointA-pointB)/3.5
+    print("Estimate min num residues: "), np.linalg.norm(pointA-pointB)/3.5
     
     seedResidue.placeAtom(2, pointA)
     seedResidue.setBlockRefPoint(pointA)
@@ -212,4 +212,4 @@ if __name__ == "__main__":
     # build building block and dump to file
     hairpinBuildingBlock = hairPinGen.generateBuildingBlock(numResidues, pointsA, pointsB, minDist, numCrankMoves, pointsToAvoid = pointsToAvoid.blockXYZVals, envelopeList=envelopeList)
     hairpinBuildingBlock.exportBBK(fIO.fileRootFromInfile(filename, 'txt'))
-    print "hairpin done"
+    print("hairpin done")

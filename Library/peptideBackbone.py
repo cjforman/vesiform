@@ -21,16 +21,19 @@ class peptideBackboneGenerator(BBG):
 
         keyProc.initialiseParameters(self)
     
-        self.CCbondLength = self.getParam('CCbondLength')
-        self.CNbondLength = self.getParam('CNbondLength')        
-        self.phi = self.getParam('phi') * np.pi / 180.0
-        self.psi = self.getParam('psi') * np.pi / 180.0
-        self.omega = self.getParam('omega') * np.pi / 180.0
-        self.angleN = self.getParam('angleN') * np.pi / 180.0
-        self.angleCA = self.getParam('angleCA') * np.pi / 180.0
-        self.angleC = self.getParam('angleC') * np.pi / 180.0
-        self.dumpInterimFiles = self.getParam('dumpInterimFiles')
-        
+        try:
+            self.CCbondLength = self.getParam('CCbondLength')
+            self.CNbondLength = self.getParam('CNbondLength')        
+            self.phi = self.getParam('phi') * np.pi / 180.0
+            self.psi = self.getParam('psi') * np.pi / 180.0
+            self.omega = self.getParam('omega') * np.pi / 180.0
+            self.angleN = self.getParam('angleN') * np.pi / 180.0
+            self.angleCA = self.getParam('angleCA') * np.pi / 180.0
+            self.angleC = self.getParam('angleC') * np.pi / 180.0
+            self.dumpInterimFiles = self.getParam('dumpInterimFiles')
+        except KeyError as e:
+            print(e)
+            sys.exit()
         
         if self.noLoadErrors == False:            
             print("Critical Parameters are undefined for peptide BackboneGenerator")
@@ -118,7 +121,7 @@ class peptideBackboneGenerator(BBG):
         
         # compute the final CPos for the initial residue
         TNB3 = coords.constructTNBFrame(DummyPos, NPos, CAPos)
-        CPos = CAPos + self.CCbondLength *  coords.generateTNBVecXYZ(TNB3, self.angleCA, self.psi)
+        CPos = CAPos + self.CCbondLength *  coords.generateTNBVecXYZ(TNB3, self.angleCA, self.phi)
     
         return [ NPos, CAPos, CPos]
                 
@@ -130,13 +133,13 @@ class peptideBackboneGenerator(BBG):
         
         # construct the first TNB from the previous residue
         TNB1 = coords.constructTNBFrame(prevRes[0], prevRes[1], prevRes[2])
-        NPos = prevRes[2] + self.CNbondLength * coords.generateTNBVecXYZ(TNB1, self.angleC, self.phi)
+        NPos = prevRes[2] + self.CNbondLength * coords.generateTNBVecXYZ(TNB1, self.angleC, self.psi)
         
         TNB2 = coords.constructTNBFrame(prevRes[-2], prevRes[-1], NPos)
         CAPos = NPos + self.CNbondLength * coords.generateTNBVecXYZ(TNB2, self.angleN, self.omega)
     
         TNB3 = coords.constructTNBFrame(prevRes[-1], NPos, CAPos)
-        CPos = CAPos + self.CCbondLength *  coords.generateTNBVecXYZ(TNB3, self.angleCA, self.psi)
+        CPos = CAPos + self.CCbondLength *  coords.generateTNBVecXYZ(TNB3, self.angleCA, self.phi)
     
         return [NPos, CAPos, CPos]
 

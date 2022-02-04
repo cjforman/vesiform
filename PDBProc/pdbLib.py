@@ -7,11 +7,17 @@ import copy as cp
 class PDB():
     ''' A class of utility functions for handling PDB files.'''
     
-    def __init__(self, filename):
+    def __init__(self, filename=None):
         #read in the atoms from the pdb
-        print("Processing pdb filename: ", filename)
-        self.filename = filename
-        self.readPDBAtoms(filename)
+        if filename:
+            print("Processing pdb filename: ", filename)
+            self.filename = filename
+            self.readPDBAtoms(filename)
+
+    def readPDBAtomsRet(self, filename):
+        # parse a pdb file and return as list of atoms, not as member variable
+        return self.extractAtomsFromPDBRet(fIO.readTextFile(filename))
+        
         
     def readPDBAtoms(self, filename):
         # parse a pdb file and saves all kinds of ways of looking at it as member variables that
@@ -20,6 +26,26 @@ class PDB():
         self.atoms = self.extractAtomsFromPDB()
         self.numAtoms = len(self.atoms)
         self.backBoneIndices = self.extractBackBoneIndices()
+
+    def writePDBAtomsFromList(self, atoms, filename, conectList=[]):
+        #open data file
+        try:
+            vst = open(filename, 'w')
+        except IOError as e:
+            print("I/O error({0}): {1}".format(e.errno, e.strerror))
+            raise(Exception, "Unable to open output file: " + filename)
+    
+        #parse data 
+        for conect in conectList:
+            l = self.pdbLineFromConect(conect)
+            vst.write(l)
+            
+        for atom in atoms:
+            l = self.pdbLineFromAtom(atom)
+            vst.write(l)
+        
+        vst.close()
+        return
         
     def writePDBAtoms(self, filename):
         #open data file
@@ -36,6 +62,27 @@ class PDB():
         vst.close()
         return
 
+    def writePDBAll(self, Atoms, Helices, Sheets, filename):
+        try:
+            vst = open(filename, 'w')
+        except IOError as e:
+            print("I/O error({0}): {1}".format(e.errno, e.strerror))
+            raise(Exception, "Unable to open output file: " + filename)
+        # vst.write('12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789\n')
+        #parse data 
+        for helix in Helices:
+            l = self.pdbLineFromHelix(helix)
+            vst.write(l)
+        for sheet in Sheets:
+            l = self.pdbLineFromSheet(sheet)
+            vst.write(l)
+        for atom in Atoms:
+            l = self.pdbLineFromAtom(atom)
+            vst.write(l)
+        vst.close()
+        return
+
+
     def extractHetAtomsFromPDB(self):
         #parse data 
         atoms = []
@@ -51,6 +98,24 @@ class PDB():
         print(len(atoms), " HETATOM lines read from pdb file.")                    
         return atoms
 
+    def getFieldFromPDB(self, index):
+        return [atom[index] for atom in self.atoms]
+
+    def extractAtomsFromPDBRet(self, rawPDB):
+        #parse data 
+        atoms = []
+        for line in rawPDB:
+            if line[0:4]=="ATOM":
+                try:
+                    a = self.parsePdbLine(line)
+                    if not a in atoms:
+                        atoms.append(a)
+                except:
+                    print("line: " + line + " not understood")
+                    exit(0)
+                    
+        print(len(atoms), " ATOM lines read from pdb file.")
+        return atoms
 
     def extractAtomsFromPDB(self):
         #parse data 
@@ -110,12 +175,131 @@ class PDB():
     
         return [atom_seri, atom_name, alte_loca, resi_name, chai_iden, resi_numb, code_inse, atom_xcoo, atom_ycoo, atom_zcoo, atom_occu, atom_bfac,seg_id,atom_symb,charge]
 
+    def pdbLineFromConect(self, conect):
+#        COLUMNS       DATA  TYPE      FIELD        DEFINITION
+#-------------------------------------------------------------------------
+# 1 -  6        Record name    "CONECT"
+# 7 - 11       Integer        serial       Atom  serial number
+#12 - 16        Integer        serial       Serial number of bonded atom
+#17 - 21        Integer        serial       Serial  number of bonded atom
+#22 - 26        Integer        serial       Serial number of bonded atom
+#27 - 31        Integer        serial       Serial number of bonded atom
+#         1         2         3         4         5         6         7         8
+#12345678901234567890123456789012345678901234567890123456789012345678901234567890
+#CONECT 1179  746 1184 1195 1203                    
+#CONECT 1179 1211 1222                              
+#CONECT 1021  544 1017 1020 1022
+        try:                                               
+            l = 'CONECT{: >05d}{: >05d}{: >05d}{: >05d}{: >05d}\n'.format(int(conect[0]), int(conect[1]), int(conect[2]), int(conect[3]), int(conect[4]))  
+        except:
+            print("unable to write sheet to string: ")
+            print(conect)
+            exit(0)
+        return l
+
+
+
+    def pdbLineFromHelix(self, helix):
+        # see https://www.wwpdb.org/documentation/file-format-content/format33/sect5.html
+        # Right-handed alpha (default)                1
+        # Right-handed omega                          2
+        # Right-handed pi                             3
+        # Right-handed gamma                          4
+        # Right-handed 3 - 10                         5
+        # Left-handed alpha                           6
+        # Left-handed omega                           7
+        # Left-handed gamma                           8
+        # 2 - 7 ribbon/helix                          9
+        # Polyproline                                10
+        # 12345678901234567890123456789012345678901234567890123456789012345678901234567890
+        # HELIX    1  HA GLY A   86  GLY A   94  1                                   9   
+        # HELIX    2  HB GLY B   86  GLY B   94  1                                   9  
+        #
+        # HELIX   21  21 PRO J  385  LEU J  388  5                                   4    
+        # HELIX   22  22 PHE J  397  PHE J  402  5                                   6   
+        try:
+            #l = 'HELIX {: >03d} {: >3} {:3} {:1}{: >4d}{:1} {:3} {:1}{: >4d}{:1}{: 2} {: 30} {: >5}\n'.format(int(helix[0]), helix[1], helix[2], helix[3], int(helix[4]), helix[5], helix[6], helix[7], int(helix[8]), helix[9], int(helix[10]), helix[11], int(helix[12]))
+            l = 'HELIX  {: >03d} {: >3} {:3} {:1} {: >04d}{:1} {:3} {:1} {: >04d}{:1}{:2}{:>30} {: >05}\n'.format(int(helix[0]), helix[1], 
+                                                             helix[2], helix[3], int(helix[4]), helix[5], 
+                                                             helix[6], helix[7], int(helix[8]), helix[9],
+                                                             helix[10], helix[11], helix[12])
+                        
+        except:
+            print("unable to write helix to string: ")
+            print(helix)
+            exit(0)
+        return l
+
+    def pdbLineFromSheet(self, sheet):
+        # see https://www.wwpdb.org/documentation/file-format-content/format33/sect5.html
+        # 12345678901234567890123456789012345678901234567890123456789012345678901234567890
+        # SHEET    1   A 5 THR A 107  ARG A 110  0
+        # SHEET    2   A 5 ILE A  96  THR A  99 -1  N  LYS A  98   O  THR A 107
+        # SHEET    3   A 5 ARG A  87  SER A  91 -1  N  LEU A  89   O  TYR A  97
+        # SHEET    4   A 5 TRP A  71  ASP A  75 -1  N  ALA A  74   O  ILE A  88
+        # SHEET    5   A 5 GLY A  52  PHE A  56 -1  N  PHE A  56   O  TRP A  71
+        # SHEET    1   B 5 THR B 107  ARG B 110  0
+        # SHEET    2   B 5 ILE B  96  THR B  99 -1  N  LYS B  98   O  THR B 107
+        # SHEET    3   B 5 ARG B  87  SER B  91 -1  N  LEU B  89   O  TYR B  97
+        # SHEET    4   B 5 TRP B  71  ASP B  75 -1  N  ALA B  74   O  ILE B  88
+        # SHEET    5   B 5 GLY B  52  ILE B  55 -1  N  ASP B  54   O  GLU B  73  
+        #01 1 -  6        Record name   "SHEET "
+        #02 8 - 10        Integer       strand         Strand  number which starts at 1 for each
+        #                                             strand within a sheet and increases by one.
+        #03 12 - 14        LString(3)    sheetID        Sheet  identifier.
+        #04 15 - 16        Integer       numStrands     Number  of strands in sheet.
+        #05 18 - 20        Residue name  initResName    Residue  name of initial residue.
+        #06 22             Character     initChainID    Chain identifier of initial residue 
+        #                                             in strand. 
+        #07 23 - 26        Integer       initSeqNum     Sequence number of initial residue
+        #                                                     # in strand.
+        #08 27             AChar         initICode      Insertion code of initial residue
+        #                                             in  strand.
+        #09 29 - 31        Residue name  endResName     Residue name of terminal residue.
+        #10 33             Character     endChainID     Chain identifier of terminal residue.
+        #11 34 - 37        Integer       endSeqNum      Sequence number of terminal residue.
+        #12 38             AChar         endICode       Insertion code of terminal residue.
+        #13 39 - 40        Integer       sense          Sense of strand with respect to previous
+        #                                                     # strand in the sheet. 0 if first strand,
+        #                                                     # 1 if  parallel,and -1 if anti-parallel.
+        #14 42 - 45        Atom          curAtom        Registration.  Atom name in current strand.
+        #15 46 - 48        Residue name  curResName     Registration.  Residue name in current strand
+        #16 50             Character     curChainId     Registration. Chain identifier in
+        #                                                     # current strand.
+        #17 51 - 54        Integer       curResSeq      Registration.  Residue sequence number
+        #                                                     # in current strand.
+        #18 55             AChar         curICode       Registration. Insertion code in
+        #                                                     # current strand.
+        #19 57 - 60        Atom          prevAtom       Registration.  Atom name in previous strand.
+        #20 61 - 63        Residue name  prevResName    Registration.  Residue name in
+        #                                                     # previous strand.
+        #21 65             Character     prevChainId    Registration.  Chain identifier in
+        #                                             previous  strand.
+        #21 66 - 69        Integer       prevResSeq     Registration. Residue sequence number
+        #                                                     # in previous strand.
+        #22 70             AChar         prevICode      Registration.  Insertion code in
+        #                                             previous strand.  
+        try:                                               
+            #       1      2       3    4    5    6    7     8   9      10  11      12  13   14       15  16     17  18     19      20   21  22  23
+            l = 'SHEET {: >03d} {: >3}{:2} {:3} {:1}{: >03}{:1} {:>03} {:1}{: >03}{:1}{:2} {: >04}{: >03}{:1}{: >04}{:1} {: >04}{: >03} {:1}{:1}{:1}\n'.format(sheet[0], int(sheet[1]), sheet[2], int(sheet[3]), sheet[4], sheet[5], int(sheet[6]), sheet[7], sheet[8], sheet[9], int(sheet[10]), 
+                   sheet[11], int(sheet[12]), sheet[13], sheet[14], sheet[15], int(sheet[16]), sheet[17], sheet[18], sheet[19], sheet[20], 
+                   int(sheet[21]), sheet[22])
+        except:
+            print("unable to write sheet to string: ")
+            print(sheet)
+            exit(0)
+        return l
+
+
     # write a pdb line from an atom string
     def pdbLineFromAtom(self, atom):
         try:
-            l = 'ATOM {: >06d} {: <4}{:1}{:3} {:1}{: >4d}{:1}   {: >8.3f}{: >8.3f}{: >8.3f}{: >6.2f}{: >6.2f}      {: <4}{: >2}{: >2}\n'.format(int(atom[0]), atom[1], atom[2], atom[3], atom[4], int(atom[5]), atom[6], float(atom[7]), float(atom[8]), float(atom[9]), float(atom[10]), float(atom[11]), atom[12],atom[13],atom[14])
-        except:
-            print("unable to write atom to string: ")
+            if atom[0]=='TER':
+                l = 'TER  {: >06d}      {:3} {:1}{: >4d}\n'.format(int(atom[1]), atom[2], atom[3], int(atom[4]))
+            else:
+                l = 'ATOM {: >06d} {: <4}{:1}{:3} {:1}{: >4d}{:1}   {: >8.3f}{: >8.3f}{: >8.3f}{: >6.2f}{: >6.2f}      {: <4}{: >2}{: >2}\n'.format(int(atom[0]), atom[1], atom[2], atom[3], atom[4], int(atom[5]), atom[6], float(atom[7]), float(atom[8]), float(atom[9]), float(atom[10]), float(atom[11]), atom[12], atom[13], atom[14])
+        except Exception as e:
+            print("unable to write atom to string: ", e)
             print(atom)
             exit(0)
         return l
@@ -124,6 +308,9 @@ class PDB():
         # Extracts the index numbers of the backbone atoms
         return  [ atomIndex for atomIndex, atom in enumerate(self.atoms) if atom[1] in ['N', 'CA', 'C']]
 
+    def extractCas(self):
+        # Extracts the index numbers of the CA atoms
+        return  [ atomIndex for atomIndex, atom in enumerate(self.atoms) if atom[1] in ['CA' ]]
 
     def makeXYZForBlenderFromPDB(self, outfile, backBoneOnly=True, residueTypeCheck=False):
         
@@ -317,6 +504,21 @@ class PDB():
             fIO.writeTextFile(l,outfile)
         return
     
+    def ConvertAACodes(self, res):
+        single = ['R', 'H', 'K', 'D', 'E', 'S', 'T', 'N', 'Q', 'C', 'U', 'G', 'P', 'A', 'I', 'L', 'M', 'F', 'W', 'Y', 'V']
+        triple = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'SEC', 'GLY', 'PRO', 'ALA', 'ILE', 'LEU', 'MET', 'PHE', 'TRP', 'TYR', 'VAL']
+        retVal = res
+        try:
+            if len(res)==1:
+                retVal = triple[single.index(res)]            
+            elif len(res)==3:
+                retVal = single[triple.index(res)]
+            else:
+                retVal=res
+        except ValueError:
+            retVal=res
+        return retVal
+    
     def modifySequence(self, newSequence, startResidue, outFile):
         
         newSeq = fIO.readTextFile(newSequence)
@@ -455,7 +657,7 @@ class PDB():
     
 if __name__=="__main__":
     
-    pdbfilename = 'dargo##' #sys.argv[1]
+    pdbfilename = sys.argv[1]
     
     # create instance of PDB object
     pdbObject = PDB(pdbfilename)

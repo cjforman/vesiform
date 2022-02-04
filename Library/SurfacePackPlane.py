@@ -20,13 +20,14 @@ class SurfacePackPlaneBBG(NBB):
     '''
     def __init__(self, filename):
         NBB.__init__(self, filename)
+        self.blockRefPoint = np.array([0.0, 0.0, 0.0])
         
     def initialiseParameters(self):
         # ensure parent initialisation takes place and core values are initialised 
         NBB.initialiseParameters(self) 
         
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for PlanePack object"
+            print("Critical Parameters are undefined for PlanePack object")
             sys.exit()        
     
     def generateBuildingBlock(self, numPoints, xRange1, xRange2, yRange1, yRange2, distFromOrig, minDist, envelopeList=['None'], pointsToAvoid=[], visualiseEnvelope=(0,200), showBlockDirector=False):
@@ -41,6 +42,7 @@ class SurfacePackPlaneBBG(NBB):
         return np.array([0,0,1])
 
     def generateBuildingBlockRefPoint(self):
+        print("holeyMonkeys")
         return np.array([(self.xRange1 + self.xRange2)/2, 
                          (self.yRange1 + self.yRange2)/2,
                          self.distFromOrig])

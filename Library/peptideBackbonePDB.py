@@ -32,7 +32,7 @@ class pdbPeptideBackboneGenerator(BBG):
         keyProc.initialiseParameters(self)
     
         if self.noLoadErrors == False:            
-            print "Critical Parameters are undefined for pdbPeptideBackboneGenerator"
+            print("Critical Parameters are undefined for pdbPeptideBackboneGenerator")
             sys.exit()        
 
     def generateBuildingBlock(self, backboneOnly=True, director=None, showBlockDirector=False, nameCA=False):
@@ -105,4 +105,4 @@ if __name__ == "__main__":
     pdbBuildingBlock.transformBBToLabFrame(director, refPos, rotation)
     pdbBuildingBlock.exportBBK(fIO.fileRootFromInfile(filename, 'pdb')) # adds the xyz extension automatically
     
-    print "pdb building block done"
+    print("pdb building block done")
