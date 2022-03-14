@@ -93,7 +93,8 @@ class ConstrainedPolymerPackBBG(BBG):
                                visualiseEnvelope=(0,20,'envelope.xyz'),
                                envelopeList=["None"],
                                angularRange=["None"],
-                               startDirector=["None"]):
+                               startDirector=["None"],
+                               **kwds):
 
         self.numPoints = numPoints
         self.pointA = pointA
@@ -110,7 +111,7 @@ class ConstrainedPolymerPackBBG(BBG):
         self.blockDirectorHat = blockDirector/np.linalg.norm(blockDirector)
         self.blockRefPoint= self.generateBuildingBlockRefPoint()
         self.parseEnvelopeList(envelopeList)
-        
+        self.kwds = kwds
         
         # from the points to avoid list only remember those that would pass the specified envelope test
         self.pointsToAvoid = pointsToAvoid
@@ -124,8 +125,7 @@ class ConstrainedPolymerPackBBG(BBG):
             print("Error Warning: PointB out of bounds")
             time.sleep(3)
 
-
-        return BBG.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid)
+        return BBG.generateBuildingBlock(self, numPoints, minDist, envelopeList=envelopeList, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid, **kwds)
 
     def generateBuildingBlockDirector(self):
         if self.startDirector[0] == 'None':

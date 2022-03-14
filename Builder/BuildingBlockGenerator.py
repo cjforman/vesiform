@@ -7,6 +7,7 @@ import Utilities.fileIO as fIO
 import numpy as np
 import random as rnd
 from Builder.BuildingBlock import BuildingBlock 
+from scipy.special._precompute.gammainc_asy import compute_a
 
 class BuildingBlockGenerator(keyProc):
     # This is the class definition for the base building block generator.
@@ -33,7 +34,7 @@ class BuildingBlockGenerator(keyProc):
      
     def __init__(self, paramFilename):
         # initialise the parameter dictionary
-        keyProc.__init__(self, paramFilename)    
+        keyProc.__init__(self, paramFilename)
     
     def initialiseParameters(self):
 
@@ -46,7 +47,7 @@ class BuildingBlockGenerator(keyProc):
             print("Critical Parameters are undefined for BuildingBlockGenerator")
             sys.exit()        
 
-    def generateBuildingBlock(self, numPoints, minDist, showBlockDirector=False, visualiseEnvelope=(0, 20, 'envelope.xyz'), envelopeList=['None'], pointsToAvoid=[], defaultBlockRefPoint=None):
+    def generateBuildingBlock(self, numPoints, minDist, showBlockDirector=False, visualiseEnvelope=(0, 20, 'envelope.xyz'), envelopeList=['None'], pointsToAvoid=[], defaultBlockRefPoint=None, warp=False, **kwds):
         # Returns a building block object with numPoints xyz values and names.  
         # A reference point and principal direction of the building block are defined in the block Ref Frame.
         
@@ -80,7 +81,13 @@ class BuildingBlockGenerator(keyProc):
         
         # generate the xyz positions
         self.buildingBlockXYZ = self.generateBuildingBlockXYZ()
-
+        
+        # warp the xyz positions if required
+        if warp:
+            fIO.saveXYZ(self.buildingBlockXYZ, 'N', "preWarp.xyz")
+            self.buildBlockXYZ = self.warpBuildingBlockXYZ(**kwds)
+            fIO.saveXYZ(self.buildingBlockXYZ, 'H', "postWarp.xyz")
+        
         # generate the BuildingBlock reference point
         self.blockRefPoint = self.generateBuildingBlockRefPoint()
         
@@ -104,6 +111,95 @@ class BuildingBlockGenerator(keyProc):
         # call the function to construct and return a building block from the 
         # information in the generator object. 
         return self.getBuildingBlock()
+    
+    # a function to warp a set of coordinates according to a transformation defined 
+    # in the input param file
+    def warpBuildingBlockXYZ(self, **kwds):
+        warpType = kwds['warpType']
+        
+        if warpType=='Cylindrical':
+            try:
+                self.buildingBlockXYZ = self.CylinderWarp(self.buildingBlockXYZ,
+                                                          kwds['CylinderRadius'],
+                                                          kwds['CylinderHeight'],
+                                                          kwds['wrapNumber'],
+                                                          axis=np.array([ float(component) for component in kwds['initialAxis']]),
+                                                          basePoint=np.array([ float(component) for component in kwds['basePoint']]),
+                                                          zeroPoint=np.array([ float(component) for component in kwds['zeroPoint']]))
+            except KeyError as e:
+                print("Missing parameter:", e, " need cylinderRadius, cylinderHeight, initialiAxis, basePoint, zeroPoint.")
+                sys.exit()
+    
+    # Computes the coordinates of each input point in cylindrical coords (rho, phi, z) relative to a cylinder 
+    # defined by an axis, positioned at basePosition and a zero point (to define a zero phi). 
+    # The Z parameter along this cylindrical system is taken to be the arclength position of a space curve along which we will 
+    # warp the entire set of points. THe relative rho and phi positions define the azimuth and distance of the point from the new space curve in a plane
+    # perpendicular to the space curve at each point. 
+    def CylinderWarp(self, posList, radius, height, wrapNumber, axis=np.array([0.0 ,0.0, 1.0]), basePoint=np.array([0.0, 0.0, 0.0]), zeroPoint=np.array([1.0, 0.0, 0.0])): 
+       
+        # compute the relative coords of each given point in the global cylindrical polar system defined by the input params. 
+        posListCyl = [ coords.XYZ2Cyl(pos, axis=axis, basePoint=basePoint, zeroPoint=zeroPoint) for pos in posList ]
+        
+        # fIO.saveXYZ(posListCyl, 'C', 'cylPolCoords.xyz')
+            
+        # now have rho, phi and z of each atom. z acts as arc length parameter for a space curve, and rho and phi the relative position in a plane
+        # perpendicular to space curve.         
+        return self.computeNewPos(posListCyl, radius, height, wrapNumber)  
+        
+    def computeNewPos(self, cylPosList, R, H, N):
+        # compute a scaling constant alpha, which comes from parameterizing the helix via arc length.
+        # This is necessary so that the spacing of the arclength parameters along the helix is the same as the 
+        # spacing along the axis of the unwrapped chain
+        # t = s/( (2 N pi R)^2 + h^2)^0.5  t goes from 0 to 1, which maps a helix around a cylinder
+        # of height H, radius R with wrapping number N.
+        alpha = np.power( np.power( 2.0 * np.pi * float(N) * R, 2 ) + np.power( H, 2 ), 0.5 ) 
+
+        # debugging code to replace input cylPos with a more easily understood system.
+        # cylPosList = [  np.array([0.1, 2.0 * np.pi * phi, z] ) for phi, z in zip(np.linspace(0, 1, len(cylPosList) ), np.linspace(0, 10, len(cylPosList) ) ) ]
+        # fIO.saveXYZ(cylPosList, 'Pt', 'cylPosListTest.xyz')
+        
+        # more debugging code to help figure out difference between t and arc parameters
+        # tTerms = [ np.array([ R * np.cos( 2.0 * np.pi * float(N) * t), 
+        #                      R * np.sin( 2.0 * np.pi * float(N) * t), 
+        #                      H * t]) for t in np.linspace(0.0, 1.0, 50)]
+        # fIO.saveXYZ(tTerms, 'Pt', 'tTerms.xyz')
+
+        # Compute the base point along the arc for each position. This is the XYZ coords of 
+        # the origin of each TNB frame along the arc.
+        basePointList = [ np.array([ R * np.cos( 2.0 * np.pi * float(N) * pos[2] / alpha ), 
+                                     R * np.sin( 2.0 * np.pi * float(N) * pos[2] / alpha ), 
+                                     H * pos[2] / alpha]) for pos in cylPosList ]
+
+        # fIO.saveXYZ(basePointList, 'Pt', 'basePointList.xyz')
+
+        # compute the tangent vector at the current arclength parameter
+        TList = [ np.array([ - 2.0 * np.pi * float(N) * R * np.sin( 2.0 * np.pi * float(N) * pos[2] / alpha) / alpha, 
+                               2.0 * np.pi * float(N) * R * np.cos( 2.0 * np.pi * float(N) * pos[2] / alpha) / alpha,
+                               H / alpha ]) for pos in cylPosList ]
+        
+        #normalize the tangent vector
+        THatList = [ NewT/np.linalg.norm(NewT) for NewT in TList ]
+        
+        # fIO.saveXYZ(THatList, 'Ca', 'THatList.xyz')        
+        
+        # compute the Normal vector (equivalent to the zero point vector)
+        NList = [ np.array([ np.cos(2.0 * np.pi * float(N) * pos[2]/alpha), 
+                             np.sin(2.0 * np.pi * float(N) * pos[2]/alpha),
+                             0]) for pos in cylPosList ]
+        # normalize the normal vector
+        NHatList = [ NewN/np.linalg.norm(NewN) for NewN in NList ]
+        
+        # fIO.saveXYZ(NHatList, 'Li', 'NHatList.xyz')
+        
+        # compute the Binormal vector  
+        BHatList = [ np.cross(newT, newN) for newT, newN in zip(THatList, NHatList) ]
+    
+        # fIO.saveXYZ(BHatList, 'Be', 'BHatList.xyz')
+    
+        # In the TNB frame, apply the relevant relative coords rho and phi (pos[0] and pos[1]. the T coord is always zero. 
+        return [ basePoint + pos[0] * np.cos(pos[1]) * NHat + pos[0] * np.sin(pos[1]) * BHat for pos, NHat, BHat, basePoint in zip(cylPosList, NHatList, BHatList, basePointList)]
+    
+    
     
     def parseEnvelopeList(self, envelopeList):
         self.envelopeSummary = {}

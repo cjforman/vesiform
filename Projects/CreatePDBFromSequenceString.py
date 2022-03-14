@@ -9,14 +9,15 @@ import numpy as np
 import random as rnd
 import copy as cp
 
-def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizations=0, boxSize=None, outputFilename=None, Term=True, minDist=20, postProcess=True): 
+def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizations=0, boxSize=None, outputFilename=None, Term=True, minDist=20, postProcess=True, warp=False, **kwds): 
     print("Creating PDB from sequence file: ", sequenceFile)
     print("peptide parameters in file: ", backboneFile)
     if Term:
         print("Adding ACE and NME terminals")
     
     print("number of random cranks: ", numCrankRandomizations)
-        
+    print("warp: ", warp)
+
     # create a class for making PDBS
     PDBMaker = PDB()
     
@@ -44,12 +45,11 @@ def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizatio
         print("standard box size for system with ", N, " residues: ", np.power(N * 3 * 10, 1.0/3.0))
         print("limiting to specified box size: ", boxSize)    
 
-    # build the peptide backbone with the parameters in the vesiform file 
-    polymerBBG = PBG(backboneFile) # generate a betastrand or an alphahelix (if you want hair pin, can use peptide hairpin class)
+    # Create the polymer building object with the parameters in the vesiform file 
+    polymerBBG = PBG(backboneFile) # generate a polymer with the angles specified in the file.  
 
-    if boxSize:
-        # build a peptide that is folded up inside a box
-        # create some generator objects.
+    if boxSize:        
+        # create a hairpin generator object
         hairPinGen = PHPBBG(backboneFile)
         
         # generate 1 residue seed building block using the polymerBBG
@@ -80,12 +80,12 @@ def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizatio
         envelopeList=["cuboid -" + strBSize + " " + strBSize + " -" + strBSize + " " + strBSize + " -" + strBSize + " " + strBSize]
     
         # build building block 
-        polymerBB = hairPinGen.generateBuildingBlock(N, pointsA, pointsB, minDist, numCrankRandomizations, envelopeList=envelopeList)
+        polymerBB = hairPinGen.generateBuildingBlock(N, pointsA, pointsB, minDist, numCrankRandomizations, envelopeList=envelopeList, warp=warp, **kwds)
         
         # extract the xyz vals as list
         xyzVals = polymerBB.blockXYZVals
     else:
-        polymerBB = polymerBBG.generateBuildingBlock(N, showBlockDirector=False, nameCA=True)
+        polymerBB = polymerBBG.generateBuildingBlock(N, showBlockDirector=False, nameCA=True, warp=warp, **kwds)
         
         # extract XYZ vals as a list and move the end point to the origin so all z vals are +ve 
         # avoids a formatting issue with large -ve numbers in the PDB file of a very long straight chain 
@@ -140,7 +140,7 @@ def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizatio
         L2 = ["source leaprc.protein.ff19SB\n", 
               "mol = loadpdb " + outputFilename + '\n',
               "savepdb mol " + outputFilename[0:-4] + 't.pdb \n',
-              "saveamberparm mol " + outputFilename[0:-4] + '.inpcrd ' + outputFilename[0:-4] + ".prmtop \n",
+              "saveamberparm mol " + outputFilename[0:-4] + '.prmtop ' + outputFilename[0:-4] + ".inpcrd \n",
               "quit \n"]
         
         fIO.writeTextFile(L2, "tleap_source")
@@ -148,12 +148,23 @@ def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizatio
 
 if __name__=="__main__":
     import sys
-    if len(sys.argv)==6:
-        CSQ = CreatePDBFromSequenceString(sys.argv[1], sys.argv[2], outputFilename=sys.argv[3], boxSize=float(sys.argv[4]), numCrankRandomizations=int(sys.argv[5]), Term=True)
-    elif len(sys.argv)==5:
-        CSQ = CreatePDBFromSequenceString(sys.argv[1], sys.argv[2], outputFilename=sys.argv[3], boxSize=float(sys.argv[4]), Term=True)
-    elif len(sys.argv)==4:
-        CSQ = CreatePDBFromSequenceString(sys.argv[1], sys.argv[2], outputFilename=sys.argv[3], Term=True)
-    else:
-        CSQ = CreatePDBFromSequenceString(sys.argv[1], sys.argv[2], Term=True)
+    import json
+
+    try:      
+        with open( sys.argv[2] ) as f:
+            params = json.load(f)
+    except IndexError as e:
+        print("Usage: \n", 
+              "CreatePDBFromSequenceString.py seqFile config.json\n\n",
+              "Params in json are:\n",
+              "numCrankRandomizations=0\n",
+              "boxSize=None\n", 
+              "outputFilename\n", 
+              "Term= (True or False, 1, or 0)\n", 
+              "minDist=20\n", 
+              "postProcess=True\n", 
+              "warp=False\n")
+       
+    CSQ = CreatePDBFromSequenceString(sys.argv[1], params['oldSchoolFilename'], **params)    
+    
     print("done")

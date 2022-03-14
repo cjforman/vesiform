@@ -56,7 +56,7 @@ class peptideHairpinGenerator(CPBBG):
     def __init__(self, paramFilename):
         # initialise the parameter dictionary for the base classes
         CPBBG.__init__(self, paramFilename)
-        
+       
     def initialiseParameters(self):
         # initialise the constrained polymer parent
         CPBBG.initialiseParameters(self)
@@ -77,7 +77,8 @@ class peptideHairpinGenerator(CPBBG):
                                 pointsToAvoid=[],
                                 visualiseEnvelope=(0,20,'envelope.xyz'), 
                                 envelopeList=['None'],
-                                nameCA=False):
+                                nameCA=False, 
+                                **kwds):
         self.numResidues = numResidues
         self.numPoints = self.numResidues * 3
         bondLength = 0.0 # not used in this game
@@ -92,6 +93,7 @@ class peptideHairpinGenerator(CPBBG):
         
         self.parseEnvelopeList(envelopeList)
         self.blockRefPoint = self.generateBuildingBlockRefPoint()
+        self.kwds = kwds
         
         # prematurely add pointsToAvoid and parse the envelope due to the pointsA and pointsB checks below
         self.pointsToAvoid = pointsToAvoid 
@@ -107,7 +109,7 @@ class peptideHairpinGenerator(CPBBG):
                 print("Error Warning: One of pointsB out of bounds")
                 time.sleep(3)
         
-        return CPBBG.generateBuildingBlock(self, self.numPoints, pointsA[2], pointsB[2], minDist, bondLength, numCrankMoves, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid, envelopeList=envelopeList) 
+        return CPBBG.generateBuildingBlock(self, self.numPoints, pointsA[2], pointsB[2], minDist, bondLength, numCrankMoves, visualiseEnvelope=visualiseEnvelope, pointsToAvoid=pointsToAvoid, envelopeList=envelopeList, **kwds) 
 
     def generateAllowedList(self, short=False):
         # add the first and last points to the allowed list.
