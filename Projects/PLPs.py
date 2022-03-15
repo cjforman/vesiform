@@ -17,8 +17,6 @@ from PDBProc.pdbLib import PDB as PDBL
 from PDBProc.Aligner import Aligner as Al
 import numpy as np
 import copy as cp
-import subprocess
-
 
 class AllthePLPS():
     def __init__(self, filename):
@@ -45,8 +43,8 @@ class AllthePLPS():
                     # make a directory and change to that directory
                     os.system("mkdir " + str(plpStruct))
                     os.chdir(str(plpStruct))
-                    os.system("copy ..\\..\\data\\*.txt .")
-                    os.system("copy ..\\..\\data\\*.pdb .")
+                    os.system("cp ../data/*.txt .")
+                    os.system("cp ../data/*.pdb .")
                     
                     # save the dictionary for the current PLP to file as a json
                     self.saveObject(plpStruct + '.json', plpStructs[plpStruct])
@@ -57,9 +55,13 @@ class AllthePLPS():
             
                     # change back up to the root directory
                     os.chdir(pwd)
-                    print("*****" +  plpStruct + " complete *****")
+                    
+                    if dummyRun:
+                        print("*****" +  plpStruct + " preRun Check complete. No Errors Detected *****")
+                    else:
+                        print("*****" +  plpStruct + " complete *****")
                 else:
-                    print("Not building this PLP.")
+                    print("Not building PLP: ", plpStruct)
     
 
             
@@ -89,6 +91,12 @@ class GenericPLP_Sequence(PDBL):
         # set up the plp structure dict    
         self.plpStruct = self.setUpPlpStruct(filename)
 
+        try:
+            chainLet =  self.plpStruct['chainLet']
+        except KeyError as e:
+            print('Chain Letter for PLP not specified. Defaulting to A', e)
+            chainLet = 'A'
+
         if dummyRun==False:
 
             # create an aligner object for aligning vectors. 
@@ -110,8 +118,9 @@ class GenericPLP_Sequence(PDBL):
             # and then runs sander to minimise each structure by itself in roughly the right place but not connected to backbone.
             tleapPDB, minPDB, bashscriptname = self.leapItUp(self.plpStruct['name'])
             
+            os.system("./" + bashscriptname)
             # execute the process via wsl 
-            print(subprocess.run(['wsl',  "./" + bashscriptname], env={'PATH':'d:/box/Projects/amber/amber20/bin', 'AMBERHOME':'d:/box/Projects/amber/amber20'}))
+            # print(subprocess.run(['wsl',  "./" + bashscriptname], env={'PATH':'d:/box/Projects/amber/amber20/bin', 'AMBERHOME':'d:/box/Projects/amber/amber20'}))
     
             # load in the minimised brushes into a new brush list
             self.generateBrushListFromPDB(brushList, minPDB)
@@ -121,7 +130,7 @@ class GenericPLP_Sequence(PDBL):
             self.PolymerisePLPRotate(brushList)
             
             # write out the PDB to file
-            self.writePDB(brushList, self.plpStruct['name'] + '_final' + '.pdb')
+            self.writePDB(brushList, self.plpStruct['name'] + '_final' + '.pdb', chainLet=chainLet)
    
 
     def setUpPlpStruct(self, filename):
@@ -188,9 +197,15 @@ class GenericPLP_Sequence(PDBL):
                         if seq[int(plpStruct['blocks'][block]['stapleRes'][i]) - 1]!=stapleResName:
                             print("Amino acid indicated by StapleRes entry is not a staple residue: sequence entry " + str(i + 1) + " in " + str(block))
                             errVal = True
-                        if plpStruct['blocks'][block]['secondary'][i] not in ['coil', 'alphahelix', 'betastrand']:
+                        if plpStruct['blocks'][block]['secondary'][i] not in ['coil', 'alphahelix', 'betastrand', 'file']:
                             print("Must specify 'coil', 'alphahelix' or 'betastrand' for secondary structure in sequence " + str(i) + " in " + str(block))
                             errVal = True
+                        if plpStruct['blocks'][block]['secondary'][i]=='file':
+                            try:
+                                plpStruct['blocks'][block]['secondaryFile']
+                            except KeyError as e:
+                                print("Secondary Structure defined as filename, but filename not specified. Add attribute ", e)
+                                errVal=True                                    
                 except IndexError as e:
                     print("Input array length inconsistency detected in " + str(block) + ". ", e)
                     errVal=True
@@ -299,6 +314,10 @@ class GenericPLP_Sequence(PDBL):
                     
                     elif secondary=='betastrand':
                         xyz = self.makePeptideBackBone( numTriples, filename='betastrand.txt' )
+                        
+                    elif secondary=='file':
+                        secPDB = PDBL( self.plpStruct['blocks'][block]['secondaryFile'] ) 
+                        xyz = secPDB.extractCoords()
             
                     # create a dictionary to hold each brush in
                     brush = {'names': names, 
@@ -754,7 +773,7 @@ class GenericPLP_Sequence(PDBL):
         return retVal    
 
     # list of individual brushes and filename to write as a single PDB model            
-    def writePDB(self, brushList, filename, conectList=[], terminateBrushes = False):
+    def writePDB(self, brushList, filename, conectList=[], terminateBrushes = False, chainLet=' '):
         brushIndex = 0
         previousAtoms = 0
         atomList = []
@@ -769,7 +788,7 @@ class GenericPLP_Sequence(PDBL):
                          brush['names'][atomIndex],
                          ' ',
                          brush['resNames'][atomIndex],
-                         ' ',# brushLets[brushIndex],
+                         chainLet,# brushLets[brushIndex],
                          brush['resIds'][atomIndex],
                          ' ',
                          brush['xyz'][atomIndex][0],

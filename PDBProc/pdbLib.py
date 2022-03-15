@@ -429,7 +429,7 @@ class PDB():
 
     def extractCoords(self):
         # returns numpy array of atoom coords from PDB
-        return [np.array([atom[7],atom[8],atom[9]]) for atom in self.atoms]
+        return [np.array([float(atom[7]), float(atom[8]), float(atom[9])]) for atom in self.atoms]
 
     def extractAllAtomNames(self):
         return  [ atom[1] for atom in self.atoms]
