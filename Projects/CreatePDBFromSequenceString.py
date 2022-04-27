@@ -9,7 +9,7 @@ import numpy as np
 import random as rnd
 import copy as cp
 
-def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizations=0, boxSize=None, outputFilename=None, Term=True, minDist=20, postProcess=True, warp=False, **kwds): 
+def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizations=0, boxSize=None, forcefield='ff19SB', outputFilename=None, Term=True, minDist=20, postProcess=True, warp=False, **kwds): 
     print("Creating PDB from sequence file: ", sequenceFile)
     print("peptide parameters in file: ", backboneFile)
     if Term:
@@ -137,7 +137,7 @@ def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizatio
         os.system(l1)
 
 
-        L2 = ["source leaprc.protein.ff19SB\n", 
+        L2 = ["source leaprc.protein." + forcefield + "\n", 
               "mol = loadpdb " + outputFilename + '\n',
               "savepdb mol " + outputFilename[0:-4] + 't.pdb \n',
               "saveamberparm mol " + outputFilename[0:-4] + '.prmtop ' + outputFilename[0:-4] + ".inpcrd \n",
