@@ -4,6 +4,7 @@ import Utilities.cartesian as cart
 import Utilities.coordSystems as coords 
 import Utilities.fileIO as fIO
 import numpy as np
+import random as rnd
 from Builder.BuildingBlockGenerator import BuildingBlockGenerator as BBG
 
 class peptideBackboneGenerator(BBG):
@@ -15,7 +16,7 @@ class peptideBackboneGenerator(BBG):
     
     def __init__(self, paramFilename):
         # initialise the parameter dictionary
-        keyProc.__init__(self, paramFilename)    
+        keyProc.__init__(self, paramFilename)
     
     def initialiseParameters(self):
 
@@ -39,7 +40,7 @@ class peptideBackboneGenerator(BBG):
             print("Critical Parameters are undefined for peptide BackboneGenerator")
             sys.exit()        
 
-    def generateBuildingBlock(self, numResidues, seedResidue = None, showBlockDirector=False, nameCA=False):
+    def generateBuildingBlock(self, numResidues, minDist=1.0, seedResidue=None, showBlockDirector=False, nameCA=False, warp=False, **kwds):
     
         self.numResidues = numResidues    
         self.numPoints = numResidues * 3 
@@ -49,9 +50,10 @@ class peptideBackboneGenerator(BBG):
         if not seedResidue==None:
             if not len(seedResidue)==3:
                 print("Warning: Seed residue in peptide backbone generator is not 3 atoms long") 
-        minDistDummy = 1.0
+        self.minDist = minDist
+        self.kwds = kwds
         
-        return BBG.generateBuildingBlock(self, self.numPoints, minDistDummy, showBlockDirector=showBlockDirector)
+        return BBG.generateBuildingBlock(self, self.numPoints, minDist, showBlockDirector=showBlockDirector, warp=warp, **kwds)
 
     def generateBuildingBlockXYZ(self):
 
@@ -64,16 +66,35 @@ class peptideBackboneGenerator(BBG):
         # tally the number of residues we added to strand        
         numResidues = 1
 
+        checkClashes=False
+        try:
+            checkClashes = bool(self.kwds['checkClashes'])
+        except KeyError:
+            pass
+
         # loop until we've added the right number of residues        
         while numResidues < self.numResidues:
             
             # create new residue from the last three points
-            residue = self.generateResidue(strand[-3:])
+            residue = self.generateResidue(strand[-3:], numResidues)
             
-            # add the new Residues to the strandVec list
-            [strand.append(monomer) for monomer in residue]
+            # check to see if we are checking for clashes
+            if checkClashes:
+                # only add residue if it doesn't come too close to another residue
+                if self.checkResidue(residue, strand, self.minDist): 
+                    # add the new Residues to the strandVec list
+                    [strand.append(atom) for atom in residue]
+
+                    numResidues += 1
+                    
+                    # output update. 
+                    print("current length: ", numResidues, " out of ", self.numResidues)
+
+            else:
+                # add residue without checking
+                [strand.append(atom) for atom in residue]
+                numResidues += 1
             
-            numResidues += 1
         
         # perform final orientation depending on whether or not a seed residue was provided.
         # If seed was provided then don't fiddle with orientation at all.
@@ -106,6 +127,20 @@ class peptideBackboneGenerator(BBG):
                                                               strand)
      
         return list(np.around(strand, 12)) # round the positions to 12.dp - cleans up machine precision noise on zeroes 
+
+
+    def checkResidue(self, residue, strand, minDist):
+
+        retVal = True
+        # compare distance between each point in residue and each point in strand except last three points of strand with minDist
+        # If any points are < minDist return False
+        if False in [ np.linalg.norm(resPos - strandPos) > minDist for strandPos in strand[0:-3] for resPos in residue]:
+            retVal = False
+        
+        elif False in [ np.linalg.norm(resPos - strandPos) > minDist for strandPos in strand[-1] for resPos in residue[1:]]:
+            retVal = False
+            
+        return retVal
     
     def startResidue(self):
         # generates the first residue of the backbone
@@ -119,27 +154,58 @@ class peptideBackboneGenerator(BBG):
         # generate a third dummy vector 
         DummyPos = NPos + np.array([1.0, 0.0, 0.0]) 
         
+        # determine phi and psi
+        phi, _ = self.pickPhiPsi(0)
+
         # compute the final CPos for the initial residue
         TNB3 = coords.constructTNBFrame(DummyPos, NPos, CAPos)
-        CPos = CAPos + self.CCbondLength *  coords.generateTNBVecXYZ(TNB3, self.angleCA, self.phi)
+        CPos = CAPos + self.CCbondLength *  coords.generateTNBVecXYZ(TNB3, self.angleCA, phi)
     
         return [ NPos, CAPos, CPos]
                 
-    def generateResidue(self, prevRes):
+    # can set a dictionary containing several ranges of allowed phi psi angles
+    # we always pick randomly from one of these ranges. 
+    # can limit to one very narrow range if you want a particular secondary structure  
+    def pickPhiPsi(self, resIndex):
+        
+        # figure out which phiPsi Range is of interest
+        try:
+            if self.kwds['blockLength']==0:
+                phiPsiRange = rnd.choice( list(self.kwds['phiPsiRanges'].values()) )
+            else:
+                cycleLength = len(self.kwds['phiPsiRanges']) * self.kwds['blockLength']
+                
+                curPhiPsiRangeIndex  = int(np.floor( (resIndex % cycleLength ) / self.kwds['blockLength'] ) )
+                
+                phiPsiRange = list(self.kwds['phiPsiRanges'].values())[curPhiPsiRangeIndex]
+    
+            # pick a value at random from the chosen phi psi range    
+            psi = rnd.uniform( float( phiPsiRange['minPsi'])* np.pi / 180.0, float(phiPsiRange['maxPsi'] )* np.pi / 180.0 )
+            phi = rnd.uniform( float( phiPsiRange['minPhi'])* np.pi / 180.0, float(phiPsiRange['maxPhi'] )* np.pi / 180.0 )
+        except KeyError as e:
+            print("Phi/Psi Range not specified in input json. Defaulting to .txt file input via keyProc system.")
+            phi = self.phi
+            psi = self.psi
+
+        return phi, psi
+    
+    def generateResidue(self, prevRes, resIndex):
         
         # given a list of 3 xyz positions for the previous residue
         # construct the next set of three positions with appropriate bond angles
         # and dihedral angles.
-        
+
+        phi, psi = self.pickPhiPsi(resIndex)
+                            
         # construct the first TNB from the previous residue
         TNB1 = coords.constructTNBFrame(prevRes[0], prevRes[1], prevRes[2])
-        NPos = prevRes[2] + self.CNbondLength * coords.generateTNBVecXYZ(TNB1, self.angleC, self.psi)
+        NPos = prevRes[2] + self.CNbondLength * coords.generateTNBVecXYZ(TNB1, self.angleC, psi)
         
         TNB2 = coords.constructTNBFrame(prevRes[-2], prevRes[-1], NPos)
         CAPos = NPos + self.CNbondLength * coords.generateTNBVecXYZ(TNB2, self.angleN, self.omega)
-    
+
         TNB3 = coords.constructTNBFrame(prevRes[-1], NPos, CAPos)
-        CPos = CAPos + self.CCbondLength *  coords.generateTNBVecXYZ(TNB3, self.angleCA, self.phi)
+        CPos = CAPos + self.CCbondLength *  coords.generateTNBVecXYZ(TNB3, self.angleCA, phi)
     
         return [NPos, CAPos, CPos]
 
