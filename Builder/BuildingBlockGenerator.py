@@ -7,7 +7,6 @@ import Utilities.fileIO as fIO
 import numpy as np
 import random as rnd
 from Builder.BuildingBlock import BuildingBlock 
-from scipy.special._precompute.gammainc_asy import compute_a
 
 class BuildingBlockGenerator(keyProc):
     # This is the class definition for the base building block generator.
