@@ -28,17 +28,13 @@ def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizatio
     # generate a list of three letter sequence codes from the sequence file information
     seq = [ PDBMaker.ConvertAACodes(let) for let in fIO.readTextFile(sequenceFile)[0] ]
         
-
-    # how many residues?
-    N = len(seq)
-
-    # increment number of residues by 2 if adding terminating residues ACE and NME.
-    # also add the residue names to the list. 
+    # insert terminating residues ACE and NME into the sequence if requested 
     if Term:
         seq.insert(0, 'ACE')
         seq.append('NME')
-        N = N + 2
-
+    
+    # how many residues?
+    N = len(seq)
     
     if boxSize:
         # box size should be 
@@ -85,7 +81,7 @@ def CreatePDBFromSequenceString(sequenceFile, backboneFile, numCrankRandomizatio
         # extract the xyz vals as list
         xyzVals = polymerBB.blockXYZVals
     else:
-        polymerBB = polymerBBG.generateBuildingBlock(N, showBlockDirector=False, nameCA=True, warp=warp, **kwds)
+        polymerBB = polymerBBG.generateBuildingBlock(N, minDist=minDist, showBlockDirector=False, nameCA=True, warp=warp, **kwds)
         
         # extract XYZ vals as a list and move the end point to the origin so all z vals are +ve 
         # avoids a formatting issue with large -ve numbers in the PDB file of a very long straight chain 

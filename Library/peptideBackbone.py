@@ -72,10 +72,19 @@ class peptideBackboneGenerator(BBG):
         except KeyError:
             pass
 
+        try:
+            if checkClashes and bool(self.kwds['warp']):
+                print("Warning:  You have selected check clashes and warp. The input into the warp function is checked for clashes, but not the output. You have been warned. We are not responsible for chain crossings caused by reckless warping.")
+        except KeyError:
+            pass
+
+
+        consecutiveClashes = 0
+
         # loop until we've added the right number of residues        
         while numResidues < self.numResidues:
             
-            # create new residue from the last three points
+            # create new residue from the last three points that obeys bond angles and dihedral sampling rules etc
             residue = self.generateResidue(strand[-3:], numResidues)
             
             # check to see if we are checking for clashes
@@ -89,6 +98,29 @@ class peptideBackboneGenerator(BBG):
                     
                     # output update. 
                     print("current length: ", numResidues, " out of ", self.numResidues)
+                    # set the consecutive Clashes Counter to zero
+                    consecutiveClashes=0
+                else:
+                    consecutiveClashes += 1
+                    if consecutiveClashes > self.kwds['maxClashes']:
+                        print("Max consecutive clashes reached. Removing ", self.kwds['numResiduesToPrune'], " residues (3 atoms each) from strand.")
+                        consecutiveClashes = 0
+                        print("original Strand Length: ", len(strand))
+                        strand = strand[0:-1 * (3 * int(self.kwds['numResiduesToPrune']))]
+                        print("new Strand Length: ", len(strand))
+                        if len(strand)%3==0:
+                            # reset the number of residues count
+                            numResidues = int(len(strand)/3)
+                        else:
+                            print("Warning: Strand Length is no longer multiple of 3. Somethings gone wrong.")
+                        print("new residue Length: ", numResidues)
+                        # if we accidentally prune the entire strand restart it
+                        if len(strand)<3:
+                            # create the first residue in the BB
+                            if self.seedResidue==None:
+                                strand = self.startResidue()
+                            else:
+                                strand = self.seedResidue
 
             else:
                 # add residue without checking
@@ -132,11 +164,12 @@ class peptideBackboneGenerator(BBG):
     def checkResidue(self, residue, strand, minDist):
 
         retVal = True
-        # compare distance between each point in residue and each point in strand except last three points of strand with minDist
+        # Compare minDist against the distance between each point in residue and each point in strand-except last three points of strand.
+        # There are three points in residue, but strand is just a list of points.
         # If any points are < minDist return False
         if False in [ np.linalg.norm(resPos - strandPos) > minDist for strandPos in strand[0:-3] for resPos in residue]:
             retVal = False
-        
+        # compare non-adjacent points in residue and the last point on the strand. if they are less than min Dist then reject 
         elif False in [ np.linalg.norm(resPos - strandPos) > minDist for strandPos in strand[-1] for resPos in residue[1:]]:
             retVal = False
             
