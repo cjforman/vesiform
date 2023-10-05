@@ -447,7 +447,7 @@ class BuildingBlockGenerator(keyProc):
         posOut = []
         n = 0
         for pos in posList:
-            if n % 1000==0:
+            if n % 10000==0:
                 print("Visualising Envelope:", str(n), "out of", str(len(posList)))
             if self.checkPointInBounds(pos, ignorePTA=True):
                 posOut.append(pos)

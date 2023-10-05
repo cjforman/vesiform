@@ -1,0 +1,9 @@
+float CCbondLength 1.54
+float CNbondLength 1.47
+float angleC 116.0
+float angleCA 116.0
+float angleN 122.0
+float phi -80.0
+float psi  150.0
+float omega 180.0
+int dumpInterimFiles 0

@@ -27,14 +27,17 @@ class RandomPolymerPackBBG(BBG):
     between the particles and any move that causes self-intersections or intersections with 
     pointsToAvoid is rejected.  
     
+    Once randomised, the chain is then packed into the envelope conditions using a 
+    crankshaft move.  Which takes two points and rotates all the particles in between about 
+    the axis defined by those points.
+   
     A list of acceptable points to use as crankshaft axis points are defined in the allowedList
     which is defined in a member function. For example, if you specify every third point,
     then the dihedral angles of every 1 and 2 points will never change, which is useful
     to preserve peptide bond rigidity in a peptide sequence.  The allow list defaults to 
     all points, but can be overridden.
     
-    Once randomised, the chain is then packed into the envelope conditions using the same 
-    crankshaft move.  This uses a minimisation algorithm which makes individual random 
+    To perform the crank shaft move a minimisation algorithm is applied which makes individual random 
     crankshaft moves and assesses the resulting structure. Any move which causes self-crossing,
     or intersects with pointsToAvoid is rejected.  Any move reducing the number of points
     outside the envelope is accepted.  Moves that increase the number of points are accepted
@@ -55,7 +58,11 @@ class RandomPolymerPackBBG(BBG):
     be avoided. Halfspace prevents any points from being placed on either side of a plane. 
     
     If the numSteps taken by the packing algorithm exceeeds maxNumFoldingMoves then the 
-    algorithm terminates with points left outside the envelope, and issues a warning.   
+    algorithm terminates with points left outside the envelope, and issues a warning.
+    
+    Could be here for years waiting for a solution for some sets of parameters. Indeed there's no guarantee 
+    that there is a solution for some parameters. 
+       
     '''
     def __init__(self, filename):
         BBG.__init__(self, filename)

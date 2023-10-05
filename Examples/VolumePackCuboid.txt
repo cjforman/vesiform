@@ -1,0 +1,9 @@
+int maxNumAttempts 2000
+int maxNumOperations 10000
+int maxNumPrunesBeforeChop 100
+int maxNumChops 5
+int maxLivesPerNode 5
+int maxLivesPerNewNode 2000
+string particleName C
+int dumpInterimFiles 1
+int verbose 0
