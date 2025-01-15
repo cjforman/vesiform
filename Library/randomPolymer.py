@@ -19,32 +19,48 @@ class RandomPolymerPackBBG(BBG):
     avoiding certain points and ensuring that the bond lengths are preserved between each 
     particle in the chain. 
     
-    An intial arbitrary chain is created starting at one of the points and stretching out
-    # which has well defined bond angles and dihedrals.
+    An intial arbitrary random polymer chain is created starting at a specified point with 
+    bond angles and dihedrals drawn from a specific ranges. The range of angles are defined 
+    in the local frenet frame.  The frenet frame (TNB) is determined by the last three 
+    particles in the list. It is an orthonormal basis, which one unit vector between the 
+    last two particles in the list, one which is normal to the plane containing the last 
+    three points in the list, and a third vector which is the cross product of those two 
+    first basis vectors. 
     
-    The particle chain is then manipulated by picking a random bond on the chain and 
-    rotating the entire free end of the chain about that bond. Such a move preserves bond lengths 
-    between the particles and any move that causes self-intersections or intersections with 
+    Alpha is the internal angle between the tangent vector and the bond to the new particle 
+    from the last particle in the list.  It is drawn randomly and uniformly from the range
+    alphaMin to alphaMax.  Beta is the dihedral angle of the last three particles and the 
+    new fourth particle. It is the rotation of the new particle bond about the axis between 
+    the last two particles in the chain. THe Zero angle is defined as being in the same plane 
+    as the previous three particles.
+    
+    In this way the character of the initial random chain cen be defined in a realistic way.
+    Given specific input values this procedure can even generate structures as precise as beta 
+    strands or alpha helices, with random character.                
+    
+    Once generated the final chain is then subject to additional dihedral twists until it falls entirely 
+    within a specified envelope.   
+     
+    The particle chain is manipulated by picking a random bond on the chain and 
+    rotating the entire free end of the chain about that bond. Such a move preserves bond lengths and 
+    angles between the particles and any move that causes self-intersections or intersections with 
     pointsToAvoid is rejected.  
-    
-    Once randomised, the chain is then packed into the envelope conditions using a 
-    crankshaft move.  Which takes two points and rotates all the particles in between about 
-    the axis defined by those points.
-   
-    A list of acceptable points to use as crankshaft axis points are defined in the allowedList
+
+
+    A list of acceptable points to use as axis points are defined in the allowedList
     which is defined in a member function. For example, if you specify every third point,
     then the dihedral angles of every 1 and 2 points will never change, which is useful
     to preserve peptide bond rigidity in a peptide sequence.  The allow list defaults to 
     all points, but can be overridden.
     
-    To perform the crank shaft move a minimisation algorithm is applied which makes individual random 
-    crankshaft moves and assesses the resulting structure. Any move which causes self-crossing,
+    To perform the dihedral move a minimisation algorithm is applied which makes individual random 
+    moves and assesses the resulting structure. Any move which causes self-crossing,
     or intersects with pointsToAvoid is rejected.  Any move reducing the number of points
     outside the envelope is accepted.  Moves that increase the number of points are accepted
     with a probability that decreases exponentially with the increase in number of points.
     For this algorithm to be effective in all cases the allowed List must include the 
     0th and final points, otherwise some particles cannot be moved inside the envelope 
-    with crankshaft moves. 
+    with such moves. 
     
     The default envelope is "None". Other possibilities include frustum r1 r2 Z, innersphere
     and outersphere R.   Simply supply a string in the envelope parameter with the instructions
